@@ -23,7 +23,7 @@ we needed url friendly version of Base64 which replaces `+` and `/` with `-` and
 
 But this one:
 ```
-guid.ToByteArray().ToBase64().Replace("+", "-").Replace("-", "/").Replace("=", "");
+guid.ToByteArray().ToBase64().Replace("+", "-").Replace("/", "_").Replace("=", "");
 ```
 is even slower.
 If you do this from time to time it might enough but not in tight loop in the heart of your system.
