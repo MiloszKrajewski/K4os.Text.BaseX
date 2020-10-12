@@ -29,6 +29,5 @@ namespace K4os.Text.BaseX
 		/// <param name="encoded">Encoded string.</param>
 		/// <returns>Decoded byte array.</returns>
 		public static byte[] FromBase64(this string encoded) => Default.Decode(encoded);
-
 	}
 }

@@ -1,3 +1,7 @@
+## 0.0.2 (2020/10/12)
+* ADDED: Base85 codec
+* ADDED: ShortGuid constructor can take "normal" Guid text representation as well
+
 ## 0.0.1 (2020/09/21)
 * ADDED: Base64 codec
 * ADDED: Base16 codec

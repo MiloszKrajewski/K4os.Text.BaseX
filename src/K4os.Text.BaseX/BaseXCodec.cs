@@ -20,6 +20,9 @@ namespace K4os.Text.BaseX
 		/// <summary>Value to symbol map.</summary>
 		protected ReadOnlySpan<char> ByteToChar => _byte2Char.AsSpan();
 
+		/// <summary>Map of valid digits.</summary>
+		protected ReadOnlySpan<bool> ValidChars => _validChar.AsSpan();
+
 		/// <summary>Create abstract BaseX codec. Populates character maps.</summary>
 		/// <param name="base">Codec's base.</param>
 		/// <param name="digits">Digits.</param>
@@ -49,7 +52,7 @@ namespace K4os.Text.BaseX
 		/// <summary>Scans encoded string for errors.</summary>
 		/// <param name="source">Encoded buffer.</param>
 		/// <returns>Returns index of first invalid character or -1 if no errors found.</returns>
-		public int ErrorIndex(ReadOnlySpan<char> source)
+		public virtual int ErrorIndex(ReadOnlySpan<char> source)
 		{
 			source = StripPadding(source);
 			var sourceLength = source.Length;
@@ -122,12 +125,12 @@ namespace K4os.Text.BaseX
 		/// It also compares it to <paramref name="targetLength"/> and throws
 		/// <see cref="ArgumentException"/> exception if there is not enough space.
 		/// </summary>
-		/// <param name="sourceLength">Encoded buffer.</param>
+		/// <param name="source">Encoded buffer.</param>
 		/// <param name="targetLength">Space available for decoded data.</param>
 		/// <returns>Space actually needed by decoded data.</returns>
-		protected int DecodedLength(int sourceLength, int targetLength)
+		protected int DecodedLength(ReadOnlySpan<char> source, int targetLength)
 		{
-			var expectedLength = MaximumDecodedLength(sourceLength);
+			var expectedLength = DecodedLength(source);
 			if (targetLength < expectedLength)
 				throw new ArgumentException(
 					$"Target buffer is too small, expected at least {expectedLength} bytes");
@@ -218,7 +221,7 @@ namespace K4os.Text.BaseX
 		public int Decode(ReadOnlySpan<char> source, Span<byte> target)
 		{
 			source = StripPadding(source);
-			var targetLength = DecodedLength(source.Length, target.Length);
+			var targetLength = DecodedLength(source, target.Length);
 			return targetLength <= 0 ? 0 : DecodeImpl(source, target);
 		}
 
@@ -235,7 +238,7 @@ namespace K4os.Text.BaseX
 		public byte[] Decode(ReadOnlySpan<char> source)
 		{
 			source = StripPadding(source);
-			var targetLength = MaximumDecodedLength(source.Length);
+			var targetLength = DecodedLength(source);
 			if (targetLength == 0) return Array.Empty<byte>();
 
 			var target = new byte[targetLength];

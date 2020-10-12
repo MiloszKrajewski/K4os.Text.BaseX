@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\K4os.Text.BaseX\K4os.Text.BaseX.csproj" />
+    <ProjectReference Include="..\ReferenceCodec.Logos\ReferenceCodec.Logos.csproj" />
   </ItemGroup>
   <Import Project="..\..\Common.targets" />
   <Import Project="..\..\.paket\Paket.Restore.targets" />

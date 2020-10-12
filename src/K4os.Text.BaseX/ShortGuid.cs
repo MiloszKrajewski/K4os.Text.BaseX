@@ -13,9 +13,21 @@ namespace K4os.Text.BaseX
 		private readonly Guid _guid;
 		private readonly string _text;
 
-		/// <summary>Creates a ShortGuid from a base64 encoded string</summary>
-		/// <param name="text">The encoded guid as a base64 string</param>
-		public ShortGuid(string text) => _guid = Decode(_text = text);
+		/// <summary>Creates a ShortGuid from a string. It accepts both "normal" guid and
+		/// base64 short guid.</summary>
+		/// <param name="text">The encoded guid (as "normal" guid or base64 encoded one)</param>
+		public ShortGuid(string text)
+		{
+			// if text is empty assume Guid.Empty (well, debatable)
+			// if length is less than 32 assume short guid (not buts)
+			// if not, try parse as normal guid and then, if it failed, try short guid
+			if (string.IsNullOrEmpty(text))
+				_guid = Guid.Empty;
+			else if (text.Length < 32 || !Guid.TryParse(text, out _guid))
+				_guid = Decode(text);
+
+			_text = Encode(_guid);
+		}
 
 		/// <summary>Creates a ShortGuid from a Guid</summary>
 		/// <param name="guid">The Guid to encode</param>
