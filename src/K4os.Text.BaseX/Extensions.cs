@@ -1,6 +1,6 @@
 using System;
 using System.Buffers;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace K4os.Text.BaseX
 {
@@ -28,5 +28,9 @@ namespace K4os.Text.BaseX
 
 			return array;
 		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static uint Mod85(this uint value) => 
+			value - (uint)((value * 3233857729uL) >> 38) * 85;
 	}
 }
