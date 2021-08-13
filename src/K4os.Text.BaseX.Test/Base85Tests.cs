@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using ReferenceCodec.Logos;
 using Xunit;
 
@@ -131,6 +132,19 @@ namespace K4os.Text.BaseX.Test
 			var decoded = Base85.Default.Decode(encoded);
 			
 			Assert.Equal(original, decoded);
+		}
+		
+		public static uint Mod85(uint value) => 
+			value - (uint)((value * 3233857729uL) >> 38) * 85;
+
+		[Fact]
+		public void Mod85TrickFullCoverage()
+		{
+			Parallel.For(0, (long)uint.MaxValue + 1, i => {
+				var u32 = (uint)i;
+				if (Mod85(u32) != u32 % 85)
+					throw new ArithmeticException($"Mod85 fails for {u32}");
+			});
 		}
 	}
 }

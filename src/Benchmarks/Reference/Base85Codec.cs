@@ -1,33 +1,23 @@
 using System;
 using System.Runtime.CompilerServices;
+using K4os.Text.BaseX;
 
-namespace K4os.Text.BaseX
+namespace Benchmarks.Reference
 {
-	/// <summary>
-	/// Base85 codec. This is not full Ascii85 implementation is it does not
-	/// handle whitespace not linebreaks. It is faster (because of that) though.
-	/// </summary>
-	public class Base85Codec: BaseXCodec
+	public class ReferenceBase85Codec: BaseXCodec
 	{
-		private const uint U85P1 = 85u;
-		private const uint U85P2 = 85u * 85u;
-		private const uint U85P3 = 85u * 85u * 85u;
-		private const uint U85P4 = 85u * 85u * 85u * 85u;
+		internal const string Digits85 =
+			"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+			"[\\]^_`abcdefghijklmnopqrstu";
+
+		internal const char DigitZ = 'z';
 
 		private readonly char _digitZ;
 
-		/// <summary>
-		/// Create new Base85 codec with default settings.
-		/// Note: it would be better is you just use <see cref="Base85.Default"/>
-		/// </summary>
-		public Base85Codec():
-			this(Base85.Digits85, Base85.DigitZ) { }
+		public ReferenceBase85Codec():
+			this(Digits85, DigitZ) { }
 
-		/// <summary>Create new Base85 codec using specific set of digits.</summary>
-		/// <param name="digits">Digits.</param>
-		/// <param name="digitZ">Special digit for 0s (used for RLE compression)</param>
-		/// <exception cref="ArgumentException">Throw when given digits are not valid.</exception>
-		public Base85Codec(string digits, char digitZ):
+		public ReferenceBase85Codec(string digits, char digitZ):
 			base(85, digits, true)
 		{
 			if (IsValid(digitZ))
@@ -65,12 +55,12 @@ namespace K4os.Text.BaseX
 				}
 				else
 				{
-					return (int)(current - source0);
+					return (int) (current - source0);
 				}
 			}
 
 			if (index == 1) // not a valid padding
-				return (int)(current - source0);
+				return (int) (current - source0);
 
 			return -1;
 		}
@@ -129,7 +119,7 @@ namespace K4os.Text.BaseX
 					source++;
 				}
 
-				var left = (int)(limit - source);
+				var left = (int) (limit - source);
 				if (left == 1)
 					throw new ArgumentException("Corrupted data, invalid padding");
 
@@ -139,7 +129,7 @@ namespace K4os.Text.BaseX
 					target = WriteTail(target, value4, left - 1);
 				}
 
-				return (int)(target - target0);
+				return (int) (target - target0);
 			}
 		}
 
@@ -154,10 +144,10 @@ namespace K4os.Text.BaseX
 			}
 
 			value4 =
-				Decode1(map, c0) * U85P4 +
-				Decode1(map, *(source + 1)) * U85P3 +
-				Decode1(map, *(source + 2)) * U85P2 +
-				Decode1(map, *(source + 3)) * U85P1 +
+				Decode1(map, c0) * 85u * 85u * 85u * 85u +
+				Decode1(map, *(source + 1)) * 85u * 85u * 85u +
+				Decode1(map, *(source + 2)) * 85u * 85u +
+				Decode1(map, *(source + 3)) * 85u +
 				Decode1(map, *(source + 4));
 
 			return source + 5;
@@ -167,11 +157,11 @@ namespace K4os.Text.BaseX
 		private static unsafe char* DecodeTail(byte* map, char* source, out uint value4, int left)
 		{
 			var result = 0u;
-			result += (left > 0 ? Decode1(map, *(source + 0)) : 84u) * U85P4;
-			result += (left > 1 ? Decode1(map, *(source + 1)) : 84u) * U85P3;
-			result += (left > 2 ? Decode1(map, *(source + 2)) : 84u) * U85P2;
-			result += (left > 3 ? Decode1(map, *(source + 3)) : 84u) * U85P1;
-			result += (left > 4 ? Decode1(map, *(source + 4)) : 84u);
+			result += (left > 0 ? Decode1(map, *(source + 0)) : 84u) * 85u * 85u * 85u * 85u;
+			result += (left > 1 ? Decode1(map, *(source + 1)) : 84u) * 85u * 85u * 85u;
+			result += (left > 2 ? Decode1(map, *(source + 2)) : 84u) * 85u * 85u;
+			result += (left > 3 ? Decode1(map, *(source + 3)) : 84u) * 85u;
+			result += (left > 4 ? Decode1(map, *(source + 4)) : 84u) * 1;
 			value4 = result;
 
 			return source + left;
@@ -180,10 +170,10 @@ namespace K4os.Text.BaseX
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe byte* WriteBlock(byte* target, uint value4)
 		{
-			*(target + 0) = (byte)(value4 >> 24);
-			*(target + 1) = (byte)(value4 >> 16);
-			*(target + 2) = (byte)(value4 >> 8);
-			*(target + 3) = (byte)value4;
+			*(target + 0) = (byte) (value4 >> 24);
+			*(target + 1) = (byte) (value4 >> 16);
+			*(target + 2) = (byte) (value4 >> 8);
+			*(target + 3) = (byte) value4;
 
 			return target + 4;
 		}
@@ -191,10 +181,10 @@ namespace K4os.Text.BaseX
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe byte* WriteTail(byte* target, uint value4, int left)
 		{
-			if (left > 0) *(target + 0) = (byte)(value4 >> 24);
-			if (left > 1) *(target + 1) = (byte)(value4 >> 16);
-			if (left > 2) *(target + 2) = (byte)(value4 >> 8);
-			if (left > 3) *(target + 3) = (byte)value4;
+			if (left > 0) *(target + 0) = (byte) (value4 >> 24);
+			if (left > 1) *(target + 1) = (byte) (value4 >> 16);
+			if (left > 2) *(target + 2) = (byte) (value4 >> 8);
+			if (left > 3) *(target + 3) = (byte) value4;
 
 			return target + left;
 		}
@@ -205,7 +195,7 @@ namespace K4os.Text.BaseX
 		{
 			var target0 = target;
 			var limit = source + (sourceLength & ~0x03u);
-			var padding = 4 - (int)(sourceLength & 0x03u);
+			var padding = 4 - (int) (sourceLength & 0x03u);
 			var z = _digitZ;
 
 			fixed (char* map = ByteToChar)
@@ -224,23 +214,23 @@ namespace K4os.Text.BaseX
 				}
 			}
 
-			return (int)(target - target0);
+			return (int) (target - target0);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe uint ReadBlock(byte* source) =>
-			(uint)*(source + 0) << 24 |
-			(uint)*(source + 1) << 16 |
-			(uint)*(source + 2) << 8 |
+			(uint) *(source + 0) << 24 |
+			(uint) *(source + 1) << 16 |
+			(uint) *(source + 2) << 8 |
 			*(source + 3);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe uint ReadTail(byte* source, int left)
 		{
 			var result = 0u;
-			if (left > 0) result |= (uint)*(source + 0) << 24;
-			if (left > 1) result |= (uint)*(source + 1) << 16;
-			if (left > 2) result |= (uint)*(source + 2) << 8;
+			if (left > 0) result |= (uint) *(source + 0) << 24;
+			if (left > 1) result |= (uint) *(source + 1) << 16;
+			if (left > 2) result |= (uint) *(source + 2) << 8;
 			if (left > 3) result |= *(source + 3);
 
 			return result;
@@ -255,11 +245,11 @@ namespace K4os.Text.BaseX
 				return target + 1;
 			}
 
-			*(target + 0) = Encode1(map, (value / U85P4).Mod85());
-			*(target + 1) = Encode1(map, (value / U85P3).Mod85());
-			*(target + 2) = Encode1(map, (value / U85P2).Mod85());
-			*(target + 3) = Encode1(map, (value / U85P1).Mod85());
-			*(target + 4) = Encode1(map, value.Mod85());
+			*(target + 0) = Encode1(map, value / (85u * 85u * 85u * 85u) % 85u);
+			*(target + 1) = Encode1(map, value / (85u * 85u * 85u) % 85u);
+			*(target + 2) = Encode1(map, value / (85u * 85u) % 85u);
+			*(target + 3) = Encode1(map, value / 85u % 85u);
+			*(target + 4) = Encode1(map, value % 85u);
 
 			return target + 5;
 		}
@@ -267,11 +257,11 @@ namespace K4os.Text.BaseX
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe char* EncodeTail(char* map, char* target, uint value, int left)
 		{
-			if (left > 0) *(target + 0) = Encode1(map, (value / U85P4).Mod85());
-			if (left > 1) *(target + 1) = Encode1(map, (value / U85P3).Mod85());
-			if (left > 2) *(target + 2) = Encode1(map, (value / U85P2).Mod85());
-			if (left > 3) *(target + 3) = Encode1(map, (value / U85P1).Mod85());
-			if (left > 4) *(target + 4) = Encode1(map, value.Mod85());
+			if (left > 0) *(target + 0) = Encode1(map, value / (85u * 85u * 85u * 85u) % 85u);
+			if (left > 1) *(target + 1) = Encode1(map, value / (85u * 85u * 85u) % 85u);
+			if (left > 2) *(target + 2) = Encode1(map, value / (85u * 85u) % 85u);
+			if (left > 3) *(target + 3) = Encode1(map, value / 85u % 85u);
+			if (left > 4) *(target + 4) = Encode1(map, value % 85u);
 
 			return target + left;
 		}

@@ -1,9 +1,10 @@
 ﻿namespace Exyll
 {
 	/// <remarks>Based on http://www.csharp411.com/convert-binary-to-base64-string/</remarks>
-	public class Base64Encoder : BaseEncoder
+	public class Base64Encoder: BaseEncoder
 	{
-		const string CharacterSetBase = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+		const string CharacterSetBase =
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 		public readonly char PlusChar;
 		public readonly char SlashChar;
@@ -22,14 +23,8 @@
 			SlashChar = slashChar;
 		}
 
-		public static byte[] FromBase64String(string data)
-		{
-			return Default.FromBase(data);
-		}
+		public static byte[] FromBase64String(string data) { return Default.FromBase(data); }
 
-		public static string ToBase64String(byte[] data)
-		{
-			return Default.ToBase(data);
-		}
+		public static string ToBase64String(byte[] data) { return Default.ToBase(data); }
 	}
 }
