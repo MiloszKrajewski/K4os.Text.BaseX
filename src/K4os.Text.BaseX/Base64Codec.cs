@@ -129,7 +129,7 @@ namespace K4os.Text.BaseX
 
 			return blocks;
 		}
-
+		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private unsafe uint EncodeTail(char* map, byte* source, int sourceLength, char* target)
 		{
