@@ -20,6 +20,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{835ECD
 		..\settings.cfg = ..\settings.cfg
 		..\.gitignore = ..\.gitignore
 		..\Signing.targets = ..\Signing.targets
+		..\paket.lock = ..\paket.lock
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{09557555-E201-425B-ADD6-68A8889DADC7}"
