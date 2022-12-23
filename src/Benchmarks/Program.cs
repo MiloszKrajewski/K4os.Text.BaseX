@@ -33,7 +33,7 @@ var targetB = new byte[1024];
 var targetC = new char[1024];
 Span<byte> charMap = stackalloc byte[16];
 Sse2Base16Encoder.BuildDigitMap('0', 'A', charMap);
-var done = Sse2Base16Encoder.Encode_AVX2(source, targetC, charMap);
+var done = Sse2Base16Encoder.Encode_AVX2_2(source, targetC, charMap);
 Console.WriteLine(new string(targetC.AsSpan().Slice(0, done*2)));
 #endif
 
