@@ -9,24 +9,23 @@ namespace Benchmarks;
 public class Sse2Base16Encoder
 {
 	private const byte PERM_0213 = 0b11011000;
-	private const byte PERM_0123 = 0b11100100;
-	private const byte PERM_2301 = 0b01001110;
+	private const byte PERM_0101 = 0b01000100;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe void StoreVector(Vector128<byte> source, char* target)
+	private static unsafe void StoreAscii(Vector128<byte> source, char* target)
 	{
 		Sse2.Store((byte*)(target + 0x00), Sse2.UnpackLow(source, Vector128<byte>.Zero));
 		Sse2.Store((byte*)(target + 0x08), Sse2.UnpackHigh(source, Vector128<byte>.Zero));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe void StoreVector(Vector256<byte> source, char* target)
+	private static unsafe void StoreAscii(Vector256<byte> source, char* target)
 	{
 		source = Avx2.Permute4x64(source.AsInt64(), PERM_0213).AsByte();
 		Avx.Store((byte*)(target + 0x00), Avx2.UnpackLow(source, Vector256<byte>.Zero));
 		Avx.Store((byte*)(target + 0x10), Avx2.UnpackHigh(source, Vector256<byte>.Zero));
 	}
-
+	
 	public static void BuildDigitMap(char chr0, char chrA, Span<byte> ascii)
 	{
 		if (ascii.Length < 16) ThrowOutputBufferTooShort(nameof(ascii));
@@ -35,7 +34,7 @@ public class Sse2Base16Encoder
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<byte> ToAscii(Vector128<byte> digits, byte chr0, byte chrA) =>
+	private static Vector128<byte> ToAscii(Vector128<byte> digits, byte chr0, byte chrA) =>
 		Sse2.Add(
 			Sse2.Add(digits, Vector128.Create(chr0)),
 			Sse2.And(
@@ -43,16 +42,12 @@ public class Sse2Base16Encoder
 				Vector128.Create((byte)(chrA - chr0 - 10))));
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector256<byte> ToAscii(Vector256<byte> digits, byte chr0, byte chrA) =>
-		Avx2.Add(
-			Avx2.Add(digits, Vector256.Create(chr0)),
-			Avx2.And(
-				Avx2.CompareGreaterThan(digits.AsSByte(), Vector256.Create((sbyte)9)).AsByte(),
-				Vector256.Create((byte)(chrA - chr0 - 10))));
+	private static Vector128<byte> ToAscii(Vector128<byte> digits, Vector128<byte> ascii) =>
+		Ssse3.Shuffle(ascii, digits);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<byte> ToAscii(Vector128<byte> digits, Vector128<byte> ascii) =>
-		Ssse3.Shuffle(ascii, digits);
+	private static Vector256<byte> ToAscii(Vector256<byte> digits, Vector256<byte> ascii) =>
+		Avx2.Shuffle(ascii, digits);
 
 	[DoesNotReturn]
 	private static void ThrowOutputBufferTooShort(string argumentName) =>
@@ -87,8 +82,8 @@ public class Sse2Base16Encoder
 					Sse2.And(vector16, Vector128.Create((byte)0xF0)).AsUInt16(), 4
 				).AsByte();
 
-				StoreVector(ToAscii(Sse2.UnpackLow(hiDigits, loDigits), ascii0, asciiA), tP);
-				StoreVector(ToAscii(Sse2.UnpackHigh(hiDigits, loDigits), ascii0, asciiA), tP + 16);
+				StoreAscii(ToAscii(Sse2.UnpackLow(hiDigits, loDigits), ascii0, asciiA), tP);
+				StoreAscii(ToAscii(Sse2.UnpackHigh(hiDigits, loDigits), ascii0, asciiA), tP + 16);
 
 				sP += 16;
 				tP += 32;
@@ -127,8 +122,8 @@ public class Sse2Base16Encoder
 					Sse2.And(vector16, Vector128.Create((byte)0xF0)).AsUInt16(), 4
 				).AsByte();
 
-				StoreVector(ToAscii(Sse2.UnpackLow(hiDigits, loDigits), map), tP);
-				StoreVector(ToAscii(Sse2.UnpackHigh(hiDigits, loDigits), map), tP + 16);
+				StoreAscii(ToAscii(Sse2.UnpackLow(hiDigits, loDigits), map), tP);
+				StoreAscii(ToAscii(Sse2.UnpackHigh(hiDigits, loDigits), map), tP + 16);
 
 				sP += 16;
 				tP += 32;
@@ -137,7 +132,7 @@ public class Sse2Base16Encoder
 
 		return length;
 	}
-
+	
 	public static unsafe int Encode_AVX2(
 		ReadOnlySpan<byte> source, Span<char> target, ReadOnlySpan<byte> ascii)
 	{
@@ -147,16 +142,19 @@ public class Sse2Base16Encoder
 		if (length <= 0) return 0;
 
 		if (target.Length < length * 2) ThrowOutputBufferTooShort(nameof(target));
-		
-		var ascii0 = ascii[0];
-		var asciiA = ascii[10];
 
 		fixed (byte* s0 = source)
 		fixed (char* t0 = target)
+		fixed (byte* mP = ascii)
 		{
 			var sP = s0;
 			var tP = t0;
 			var lP = s0 + length;
+
+			var map = Avx2
+				.Permute4x64(Sse2.LoadVector128(mP).ToVector256Unsafe().AsInt64(), PERM_0101)
+				.AsByte();
+			var mask0F = Vector256.Create((byte)0x0F);
 
 			while (sP < lP)
 			{
@@ -164,16 +162,20 @@ public class Sse2Base16Encoder
 					.Permute4x64(Avx.LoadVector256(sP).AsInt64(), PERM_0213)
 					.AsByte();
 
-				var loDigits = Avx2.And(vector32, Vector256.Create((byte)0x0F));
-				var hiDigits = Avx2.ShiftRightLogical(
-					Avx2.And(vector32, Vector256.Create((byte)0xF0)).AsUInt16(), 4
-				).AsByte();
-				
-				StoreVector(ToAscii(Avx2.UnpackLow(hiDigits, loDigits), ascii0, asciiA), tP);
-				StoreVector(ToAscii(Avx2.UnpackHigh(hiDigits, loDigits), ascii0, asciiA), tP + 32);
-
 				sP += 32;
-				tP += 64;
+
+				var loDigits = Avx2.And(
+					vector32, 
+					mask0F);
+				var hiDigits = Avx2.And(
+					Avx2.ShiftRightLogical(vector32.AsUInt16(), 4).AsByte(), 
+					mask0F);
+
+				StoreAscii(ToAscii(Avx2.UnpackLow(hiDigits, loDigits), map), tP);
+				tP += 32;
+				
+				StoreAscii(ToAscii(Avx2.UnpackHigh(hiDigits, loDigits), map), tP);
+				tP += 32;
 			}
 		}
 

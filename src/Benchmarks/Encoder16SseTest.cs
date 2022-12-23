@@ -24,12 +24,20 @@ public class Encoder16SseTest
 		_target = new char[_baseline.EncodedLength(_source)];
 		Sse2Base16Encoder.BuildDigitMap('0', 'A', _charMap);
 	}
-
-	[Benchmark]
-	public void Naive()
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static char ToUpperHexCharacter(int value)
 	{
-		var source = _source;
-		var target = _target;
+		value &= 0x0F;
+		value += '0';
+		if (value > '9')
+			value += 'A' - ('9' + 1);
+
+		return (char)value;
+	}
+	
+	private static void NaiveEncode(byte[] source, char[] target)
+	{
 		var length = source.Length;
 		var i = 0;
 		var o = 0;
@@ -41,16 +49,8 @@ public class Encoder16SseTest
 		}
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static char ToUpperHexCharacter(int value)
-	{
-		value &= 0x0F;
-		value += '0';
-		if (value > '9')
-			value += 'A' - ('9' + 1);
-
-		return (char)value;
-	}
+	[Benchmark]
+	public void Naive() { NaiveEncode(_source, _target); }
 
 	[Benchmark(Baseline = true)]
 	public void Baseline() { _baseline.Encode(_source, _target); }
