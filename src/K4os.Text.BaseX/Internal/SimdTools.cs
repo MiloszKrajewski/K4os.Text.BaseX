@@ -97,7 +97,6 @@ internal class SimdTools: SimdSettings
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	protected static Vector256<byte> FromAscii(Vector256<byte> digits, sbyte ascii0, sbyte asciiA) =>
 		FromAsciiImpl(digits.AsSByte(), ascii0, (sbyte)(asciiA | 0x20)).AsByte();
-
 }
 
 #endif
