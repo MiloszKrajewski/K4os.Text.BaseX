@@ -7,7 +7,7 @@ namespace K4os.Text.BaseX.Test
 
 	public class Base64Tests
 	{
-		public static Base64Codec Codec = new Base64Codec();
+		public static Base64Codec Codec = new();
 
 		[Theory]
 		[InlineData(1), InlineData(2), InlineData(3), InlineData(4), InlineData(5)]

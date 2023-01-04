@@ -1,4 +1,10 @@
 using System;
+using K4os.Text.BaseX.Internal;
+
+#if !NET5_0_OR_GREATER
+// this makes SimdBase16Codec and Base16Codec painting to the same class  
+using SimdBase16Codec = K4os.Text.BaseX.Base16Codec;
+#endif
 
 namespace K4os.Text.BaseX
 {
@@ -9,10 +15,12 @@ namespace K4os.Text.BaseX
 		internal const string UpperDigits = "0123456789ABCDEF";
 
 		/// <summary>Codec using lower case characters by default.</summary>
-		public static Base16Codec Lower { get; } = new Base16Codec(LowerDigits);
+		public static Base16Codec Lower { get; } =
+			SimdSettings.IsSimdSupported ? new SimdBase16Codec(true) : new Base16Codec(true);
 
 		/// <summary>Codec using upper case characters by default.</summary>
-		public static Base16Codec Upper { get; } = new Base16Codec(UpperDigits);
+		public static Base16Codec Upper { get; } =
+			SimdSettings.IsSimdSupported ? new SimdBase16Codec(false) : new Base16Codec(false);
 
 		/// <summary>Default codec (same as <see cref="Upper"/>.</summary>
 		public static Base16Codec Default => Upper;
@@ -21,7 +29,7 @@ namespace K4os.Text.BaseX
 		/// <param name="decoded">Decoded buffer.</param>
 		/// <returns>Base16 encoded string.</returns>
 		public static string ToHex(this byte[] decoded) => Default.Encode(decoded);
-		
+
 		/// <summary>Converts byte span to Base16 string.</summary>
 		/// <param name="decoded">Decoded buffer.</param>
 		/// <returns>Base16 encoded string.</returns>

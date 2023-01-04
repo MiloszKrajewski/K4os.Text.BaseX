@@ -3,12 +3,12 @@ using BenchmarkDotNet.Attributes;
 using Benchmarks.Reference;
 using K4os.Text.BaseX;
 
-namespace Benchmarks
+namespace Benchmarks.Base85
 {
 	using ReferenceCodec = ReferenceBase85Codec;
 	using ChallengerCodec = Base85Codec;
 
-	public class Decoder85
+	public class Codec85
 	{
 		private ReferenceCodec _referenceCodec;
 		private ChallengerCodec _challengerCoded;

@@ -1,8 +1,7 @@
 using System;
 using BenchmarkDotNet.Attributes;
-using K4os.Text.BaseX;
 
-namespace Benchmarks
+namespace Benchmarks.Base16
 {
 	public class Encoder16WithStringCreate
 	{
@@ -64,7 +63,7 @@ namespace Benchmarks
 				bytes.Length * 2 + 2, bytes, (targetSpan, array) => {
 					targetSpan[0] = '0';
 					targetSpan[1] = 'x';
-					Base16.Upper.Encode(array, targetSpan[2..]);
+					K4os.Text.BaseX.Base16.Upper.Encode(array, targetSpan[2..]);
 				});
 		}
 	}

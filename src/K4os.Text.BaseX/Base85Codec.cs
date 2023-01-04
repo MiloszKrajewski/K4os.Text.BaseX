@@ -115,7 +115,7 @@ namespace K4os.Text.BaseX
 			var limit = source + sourceLength;
 			var limit5 = limit - 5;
 
-			fixed (byte* map = CharToByte)
+			fixed (byte* map = Utf8ToByte)
 			{
 				while (source < limit5)
 				{

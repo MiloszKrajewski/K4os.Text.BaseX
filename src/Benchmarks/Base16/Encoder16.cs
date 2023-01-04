@@ -3,7 +3,7 @@ using BenchmarkDotNet.Attributes;
 using BaselineCodec = K4os.Text.BaseX.Base16Codec;
 using ChallengerCodec = K4os.Text.BaseX.Base16Codec;
 
-namespace Benchmarks;
+namespace Benchmarks.Base16;
 
 public class Encoder16
 {
