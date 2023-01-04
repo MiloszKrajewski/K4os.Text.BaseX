@@ -1,3 +1,6 @@
+## 0.0.5 (2023/01/01)
+* IMPROVED: Base16 can use SIMD (SSE2/AVX2) instructions to speed up encoding/decoding
+
 ## 0.0.4 (2021/08/13)
 * IMPROVED: Base85 is now faster
 
