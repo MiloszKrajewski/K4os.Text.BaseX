@@ -3,14 +3,14 @@ using BenchmarkDotNet.Attributes;
 using Exyll;
 using K4os.Text.BaseX;
 
-namespace Benchmarks
+namespace Benchmarks.Base64
 {
-	public class Decoder64VsExyll
+	public class Encoder64VsExyll
 	{
 		private static Base64Encoder _exyll;
 		private static Base64Codec _mine;
 		private byte[] _source;
-		private string _encoded;
+		private char[] _target;
 
 		[Params(16, 1337)]
 		public int Length { get; set; }
@@ -22,16 +22,19 @@ namespace Benchmarks
 			_exyll = Base64Encoder.Default;
 			_source = new byte[Length];
 			new Random().NextBytes(_source);
-			_encoded = Convert.ToBase64String(_source);
+			_target = new char[_mine.MaximumEncodedLength(_source.Length)];
 		}
 
 		[Benchmark]
-		public void Mine() { _ = _mine.Decode(_encoded); }
+		public void Mine() { _ = _mine.Encode(_source); }
+		
+		[Benchmark]
+		public void MineNoAlloc() { _mine.Encode(_source.AsSpan(), _target.AsSpan()); }
 
 		[Benchmark]
-		public void Framework() { _ = Convert.FromBase64String(_encoded); }
+		public void Framework() { _ = Convert.ToBase64String(_source); }
 
 		[Benchmark]
-		public void Exyll() { _ = _exyll.FromBase(_encoded); }
+		public void Exyll() { _ = _exyll.ToBase(_source); }
 	}
 }

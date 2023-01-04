@@ -1,12 +1,12 @@
 using System;
 using BenchmarkDotNet.Attributes;
 
-namespace Benchmarks
+namespace Benchmarks.Base64
 {
-	using BaselineCodec = K4os.Text.BaseX.Base16Codec;
-	using ChallengerCodec = K4os.Text.BaseX.Base16Codec;
+	using BaselineCodec = K4os.Text.BaseX.Base64Codec;
+	using ChallengerCodec = K4os.Text.BaseX.Base64Codec;
 
-	public class Decoder16
+	public class Decoder64
 	{
 		private static BaselineCodec _baseline;
 		private static ChallengerCodec _challenger;
@@ -25,7 +25,7 @@ namespace Benchmarks
 			_source = new byte[Length];
 			new Random().NextBytes(_source);
 			_encoded = Convert.ToBase64String(_source);
-			_decoded = new byte[Length];
+			_decoded = new byte[_baseline.DecodedLength(_encoded)];
 		}
 
 		[Benchmark]

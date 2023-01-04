@@ -178,7 +178,7 @@ namespace K4os.Text.BaseX
 		protected override unsafe int DecodeImpl(
 			char* source, int sourceLength, byte* target, int targetLength)
 		{
-			fixed (byte* map = CharToByte)
+			fixed (byte* map = Utf8ToByte)
 			{
 				var targetStart = target;
 

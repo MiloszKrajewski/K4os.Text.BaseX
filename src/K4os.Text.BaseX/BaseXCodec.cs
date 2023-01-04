@@ -10,14 +10,18 @@ namespace K4os.Text.BaseX
 		/// <summary>Maximum digits. Effectively all ASCII8 characters.</summary>
 		protected const int MAX_DIGIT = 255;
 
-		private readonly byte[] _char2Byte = new byte[MAX_DIGIT + 1];
+		private readonly byte[] _utf82Byte = new byte[MAX_DIGIT + 1];
+		private readonly byte[] _byte2Utf8 = new byte[MAX_DIGIT + 1];
 		private readonly char[] _byte2Char = new char[MAX_DIGIT + 1];
 		private readonly bool[] _validChar = new bool[MAX_DIGIT + 1];
 
 		/// <summary>Symbol to value map.</summary>
-		protected ReadOnlySpan<byte> CharToByte => _char2Byte.AsSpan();
+		protected ReadOnlySpan<byte> Utf8ToByte => _utf82Byte.AsSpan();
 
-		/// <summary>Value to symbol map.</summary>
+		/// <summary>Value to symbol map (1 byte per character).</summary>
+		protected ReadOnlySpan<byte> ByteToUtf8 => _byte2Utf8.AsSpan();
+
+		/// <summary>Value to symbol map (2 bytes per character).</summary>
 		protected ReadOnlySpan<char> ByteToChar => _byte2Char.AsSpan();
 
 		/// <summary>Map of valid digits.</summary>
@@ -45,7 +49,7 @@ namespace K4os.Text.BaseX
 		/// <returns><c>true</c> if digit is valid, <c>false</c> otherwise.</returns>
 		protected bool IsValid(char digit)
 		{
-			var c = (ushort) digit;
+			var c = (ushort)digit;
 			return c <= MAX_DIGIT && _validChar[c];
 		}
 
@@ -59,7 +63,7 @@ namespace K4os.Text.BaseX
 			var validSet = _validChar.AsSpan();
 			for (var i = 0; i < sourceLength; i++)
 			{
-				var c = (ushort) source[i];
+				var c = (ushort)source[i];
 				if (c > MAX_DIGIT || !validSet[c]) return i;
 			}
 
@@ -83,21 +87,22 @@ namespace K4os.Text.BaseX
 			for (var i = 0; i < digits.Length; i++)
 			{
 				var c = digits[i];
-				var d = (byte) i;
+				var d = (byte)i;
 				if (c > MAX_DIGIT) throw InvalidChar(c);
 				if (_validChar[c]) throw DuplicateChar(c);
 
+				_byte2Char[d] = c;
+				_byte2Utf8[d] = (byte)c;
+
 				if (caseSensitive)
 				{
-					_byte2Char[d] = c;
-					_char2Byte[c] = d;
+					_utf82Byte[c] = d;
 					_validChar[c] = true;
 				}
 				else
 				{
-					_byte2Char[d] = c;
 					var (lc, uc) = (Lower(c), Upper(c));
-					_char2Byte[lc] = _char2Byte[uc] = d;
+					_utf82Byte[lc] = _utf82Byte[uc] = d;
 					_validChar[lc] = _validChar[uc] = true;
 				}
 			}
@@ -255,26 +260,63 @@ namespace K4os.Text.BaseX
 		public string Encode(ReadOnlySpan<byte> source, ArrayPool<char> arrayPool)
 		{
 			var targetLength = EncodedLength(source);
-			if (targetLength == 0) return string.Empty;
+			if (targetLength <= 0) return string.Empty;
 
+			#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+			
+			return EncodeToString(source, targetLength);
+
+			#else
+
+			return EncodeToString(source, targetLength, arrayPool);
+
+			#endif
+		}
+
+		#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+		
+		private unsafe string EncodeToString(ReadOnlySpan<byte> source, int targetLength)
+		{
+			fixed (byte* sourceP = source)
+			{
+				// it is quite ugly pointer passing to avoid closure and pass Span<T> to lambda
+
+				var usedLength = 0;
+				var args = (
+					c: this,
+					s: (IntPtr)sourceP, 
+					r: (IntPtr)(&usedLength),
+					l: source.Length 
+				);
+				
+				var result = string.Create(
+					targetLength, args, static (t, state) => {
+						var s = new Span<byte>((byte*)state.s, state.l);
+						*(int*)state.r = state.c.EncodeImpl(s, t);
+					});
+
+				return usedLength == targetLength ? result : result[..usedLength];
+			}
+		}
+		
+		#endif
+		
+		private string EncodeToString(
+			ReadOnlySpan<byte> source, int targetLength, ArrayPool<char> arrayPool)
+		{
 			var pooled = arrayPool.TryRent(sizeof(char), targetLength);
-			try
-			{
-				var target = pooled ?? new char[targetLength];
-				var used = EncodeImpl(source, target.AsSpan());
-				return new string(target, 0, used);
-			}
-			finally
-			{
-				arrayPool.TryReturn(pooled);
-			}
+			var target = pooled ?? new char[targetLength];
+			var used = EncodeImpl(source, target.AsSpan());
+			var result = new string(target, 0, used);
+			arrayPool.TryReturn(pooled); // not "finally" as it is unlikely to throw
+			return result;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static char Upper(char c) => c >= 'a' && c <= 'z' ? (char) (c - 'a' + 'A') : c;
+		private static char Upper(char c) => c is >= 'a' and <= 'z' ? (char)(c - 'a' + 'A') : c;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static char Lower(char c) => c >= 'A' && c <= 'Z' ? (char) (c - 'A' + 'a') : c;
+		private static char Lower(char c) => c is >= 'A' and <= 'Z' ? (char)(c - 'A' + 'a') : c;
 
 		/// <summary>Decodes single character.</summary>
 		/// <param name="map">Character map.</param>
@@ -288,7 +330,7 @@ namespace K4os.Text.BaseX
 		/// <param name="c">Character.</param>
 		/// <returns>A digit values assigned to character.</returns>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected static unsafe byte Decode1(byte* map, char c) => *(map + (byte) c);
+		protected static unsafe byte Decode1(byte* map, char c) => *(map + (byte)c);
 
 		/// <summary>Encodes single digit.</summary>
 		/// <param name="map">Digit map.</param>
@@ -302,7 +344,7 @@ namespace K4os.Text.BaseX
 		/// <param name="v">Digit value.</param>
 		/// <returns>A character assigned to digit value.</returns>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected static unsafe char Encode1(char* map, int v) => *(map + (uint) v);
+		protected static unsafe char Encode1(char* map, int v) => *(map + (uint)v);
 
 		private static ArgumentException InvalidChar(char c) =>
 			new ArgumentException($"Invalid character '{c}'");

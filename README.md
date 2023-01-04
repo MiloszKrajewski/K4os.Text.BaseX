@@ -16,10 +16,74 @@ var hex = BitConverter.ToString(data).Replace("-", string.Empty);
 ```
 then something is really really wrong.
 
+Above approach is 100s times slower than `BaseX` implementation.
+
+To be frank, Since .NET 5 there are very efficient `Convert.FromHexString` and `Convert.ToHexString` methods 
+(actual implementation is in `HexConverter`, 
+see [here](https://source.dot.net/#System.Net.Primitives/src/libraries/Common/src/System/HexConverter.cs)), 
+so `BaseX` library is not that "revolutionary" anymore, but before .NET 5 is might be a life saver.
+
+Same as `HexConverter`, it has SIMD (SSE2/SSSE3/AVX2) encoder implementations giving it roughly the same performance, 
+although `HexConverter` always allocates a new string, while `BaseX` can store output in a provided `Span<char>` 
+so it can be used with, for example, `IBufferWriter<char>`, avoiding any allocations. 
+
+### Base16 encoding
+
+|        Method | Length |          Mean | Ratio |
+|--------------:|-------:|--------------:|------:|
+|   Base16_Span |     32 |      12.98 ns |  0.49 |
+| Base16_String |     32 |      26.82 ns |  1.01 |
+|  HexConverter |     32 |      26.59 ns |  1.00 |
+|               |        |               |       |
+|   Base16_Span |    256 |      28.70 ns |  0.31 |
+| Base16_String |    256 |      68.90 ns |  0.74 |
+|  HexConverter |    256 |      93.39 ns |  1.00 |
+|               |        |               |       |
+|   Base16_Span |   4096 |     391.60 ns |  0.33 |
+| Base16_String |   4096 |     783.06 ns |  0.66 |
+|  HexConverter |   4096 |   1,180.64 ns |  1.00 |
+|               |        |               |       |
+|   Base16_Span |  65536 |   6,168.66 ns |  0.05 |
+| Base16_String |  65536 | 120,121.02 ns |  0.91 |
+|  HexConverter |  65536 | 128,228.19 ns |  1.00 |
+
+As you can see, when encoding to `string` `BaseX` encoder is a little bit faster than `HexConverter` for large inputs, 
+and roughly the same for small inputs. However, it is much faster when encoding to pre-allocated `Span<char>`, which 
+open door to all no-allocation tricks (like mentioned before `IBufferWriter<char>`, `stackalloc`, etc). 
+Yes, it is not fair comparison, as `HexConverter` does not have such mode, but at the same time that's exactly the point: 
+`HexConverter` **does not have such mode**.
+
+### Base16 decoding
+
+`Base16` decoder is much faster though, up to 10x faster than `HexConverter` actually:
+
+|        Method | Length |         Mean | Ratio |
+|--------------:|-------:|-------------:|------:|
+|   Base16_Span |     32 |     23.55 ns |  0.39 |
+| Base16_String |     32 |     30.27 ns |  0.50 |
+|  HexConverter |     32 |     60.20 ns |  1.00 |
+|               |        |              |       |
+|   Base16_Span |    256 |     47.02 ns |  0.12 |
+| Base16_String |    256 |     62.10 ns |  0.15 |
+|  HexConverter |    256 |    402.66 ns |  1.00 |
+|               |        |              |       |
+|   Base16_Span |   4096 |    493.34 ns |  0.08 |
+| Base16_String |   4096 |    638.46 ns |  0.10 |
+|  HexConverter |   4096 |  6,118.14 ns |  1.00 |
+|               |        |              |       |
+|   Base16_Span |  65536 |  7,626.52 ns |  0.08 |
+| Base16_String |  65536 |  9,258.14 ns |  0.10 |
+|  HexConverter |  65536 | 96,583.53 ns |  1.00 |
+
+This is because `HexConverter` does not have SIMD decoder implementation (yet, I believe), while `BaseX` does.
+
+**NOTE**: decoder is **very** tolerant to invalid input - it will not crash, but it will also not report any errors. Garbage in, garbage out, but no warning.  
+
 ## Base64
 
 With Base64 the story is a little bit different. .NET has very decent Base64 codec and I wouldn't need to do anything, but...
-we needed url friendly version of Base64 which replaces `+` and `/` with `-` and `_` (respectively) as both of them have special meaning in URLs. Also it wouldn't be wrong if were able to remove padding, and... `string.Replace(...)` is not fast.
+we needed url friendly version of Base64 which replaces `+` and `/` with `-` and `_` (respectively) as both of them have 
+special meaning in URLs. Also it wouldn't be wrong if were able to remove padding, and... `string.Replace(...)` is not fast.
 
 But this one:
 ```

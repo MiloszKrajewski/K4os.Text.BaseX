@@ -13,6 +13,16 @@ namespace K4os.Text.BaseX
 		/// prefer using codecs as static/singletons.
 		/// </summary>
 		public Base16Codec(): this(Base16.UpperDigits) { }
+
+		/// <summary>
+		/// Creates Base16 codec.
+		/// <see cref="Base16"/> class for some default codecs.
+		/// Please note, this operation is relatively slow (to use in hot spots) so
+		/// prefer using codecs as static/singletons.
+		/// </summary>
+		/// <param name="lowerCase">Use lower case alphabet.</param>
+		public Base16Codec(bool lowerCase): 
+			this(lowerCase ? Base16.LowerDigits : Base16.UpperDigits) { }
 		
 		/// <summary>
 		/// Creates Base16 codec using specific set of digits.
@@ -31,8 +41,22 @@ namespace K4os.Text.BaseX
 			var targetStart = target;
 			var sourceEnd = source + sourceLength;
 
-			fixed (byte* map = CharToByte)
+			fixed (byte* map = Utf8ToByte)
 			{
+				source += 8;
+				
+				while (source < sourceEnd)
+				{
+					*(target + 0) = Decode2(map, *(uint*) (source - 8));
+					*(target + 1) = Decode2(map, *(uint*) (source - 6));
+					*(target + 2) = Decode2(map, *(uint*) (source - 4));
+					*(target + 3) = Decode2(map, *(uint*) (source - 2));
+					source += 8;
+					target += 4;
+				}
+
+				source -= 8;
+				
 				while (source < sourceEnd)
 				{
 					*target = Decode2(map, *(uint*) source);
@@ -53,6 +77,20 @@ namespace K4os.Text.BaseX
 
 			fixed (char* map = ByteToChar)
 			{
+				source += 4;
+				
+				while (source < sourceEnd)
+				{
+					*(uint*) (target + 0) = Encode2(map, *(source - 4));
+					*(uint*) (target + 2) = Encode2(map, *(source - 3));
+					*(uint*) (target + 4) = Encode2(map, *(source - 2));
+					*(uint*) (target + 6) = Encode2(map, *(source - 1));
+					source += 4;
+					target += 8;
+				}
+
+				source -= 4;
+
 				while (source < sourceEnd)
 				{
 					*(uint*) target = Encode2(map, *source);
