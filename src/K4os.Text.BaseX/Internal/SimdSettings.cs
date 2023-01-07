@@ -17,7 +17,7 @@ public class SimdSettings
 	
 	/// <summary>Allows using SSE2.</summary>
 	public static bool AllowSse2 { get; set; } = true;
-
+	
 	#if !NET5_0_OR_GREATER
 	
 	/// <summary>Indicates if any of SIMD instruction sets are supported.</summary>

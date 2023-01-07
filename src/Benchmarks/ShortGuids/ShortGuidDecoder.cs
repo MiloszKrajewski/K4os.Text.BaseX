@@ -9,7 +9,7 @@ namespace Benchmarks.ShortGuids;
 public unsafe class ShortGuidDecoder
 {
 	private static readonly string Value = 
-		new ShortGuid("12345678-1234-1234-1234-123456789012").Text;
+		new ShortGuid(Guid.Parse("12345678-1234-1234-1234-123456789012")).Text;
 	private static readonly BaseXCodec Codec = K4os.Text.BaseX.Base64.Url;
 	
 	[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
@@ -20,8 +20,11 @@ public unsafe class ShortGuidDecoder
 	public void Baseline()
 	{
 		var text = Value;
+		// this was the "old" way: decode text, but then re-encode it to ensure it is correct
 		var guid = new Guid(Codec.Decode(text));
+		text = Codec.Encode(guid.ToByteArray());
 		NoOp(guid);
+		NoOp(text);
 	}
 	
 	[Benchmark]
