@@ -1,4 +1,5 @@
 using System;
+using K4os.Text.BaseX.Internal;
 
 namespace K4os.Text.BaseX;
 
@@ -7,12 +8,14 @@ namespace K4os.Text.BaseX;
 /// </summary>
 public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparable<ShortGuid>
 {
-	/// <summary>A read-only instance of the ShortGuid class whose value is guaranteed to be all zeroes.</summary>
-	public static readonly ShortGuid Empty = new(Guid.Empty);
-
+	private static readonly Base64Codec Codec = Base64.Url;
+	
 	/// <summary>Length of ShortGuid string representation (base32 without padding).</summary>
 	public const int Length = 22;
 
+	/// <summary>A read-only instance of the ShortGuid class whose value is guaranteed to be all zeroes.</summary>
+	public static readonly ShortGuid Empty = new(Guid.Empty);
+	
 	private static readonly string EmptyText = Empty.Text;
 
 	private readonly Guid _guid;
@@ -21,24 +24,20 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <summary>Creates a ShortGuid from a string. It accepts both "normal" guid and
 	/// base64 short guid.</summary>
 	/// <param name="text">The encoded guid (as "normal" guid or base64 encoded one)</param>
-	public ShortGuid(string text)
-	{
-		// if text is empty assume Guid.Empty (well, debatable)
-		// if length is less than 32 assume short guid (no buts)
-		// if not, try parse as normal guid and then, if it failed, try short guid
-		if (string.IsNullOrEmpty(text))
-			_guid = Guid.Empty;
-		else if (text.Length < 32 || !Guid.TryParse(text, out _guid))
-			_guid = Decode(text);
-
-		// note, guid is always re-encoded even if it was provided as short guid
-		// it allows to keep representation consistent
-		_text = Encode(_guid);
-	}
+	public ShortGuid(string text) { ParseShortGuid(text, out _guid, out _text); }
 
 	/// <summary>Creates a ShortGuid from a Guid</summary>
 	/// <param name="guid">The Guid to encode</param>
 	public ShortGuid(Guid guid) => _text = Encode(_guid = guid);
+
+	/// <summary>Creates a ShortGuid from a Guid as text. Does not validate anything.</summary>
+	/// <param name="guid">Guid.</param>
+	/// <param name="text">Text.</param>
+	private ShortGuid(Guid guid, string text)
+	{
+		_guid = guid;
+		_text = text;
+	}
 
 	/// <summary>Gets the underlying Guid.</summary>
 	public Guid Guid => _guid;
@@ -49,6 +48,31 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <summary>Returns the base64 encoded guid as a string</summary>
 	/// <returns>Text representation of short guid (in ShortGuid form)</returns>
 	public override string ToString() => Text;
+
+	/// <summary>Returns a value indicating whether given text can be parsed to <see cref="ShortGuid"/>.</summary>
+	/// <param name="text">Text with ShortGuid or Guid.</param>
+	/// <returns>Value indicating whether given text can be parsed.</returns>
+	public static bool CanParse(string text) => Validate(text) != ShortGuidFormat.Invalid;
+
+	/// <summary>Tries to parsed text as <see cref="ShortGuid"/>.</summary>
+	/// <param name="text">Text with ShortGuid or Guid.</param>
+	/// <returns><see cref="ShortGuid"/> or <c>null</c>.</returns>
+	public static ShortGuid? TryParse(string text) =>
+		ParseShortGuid(text, out var guid, out text, false) ? new ShortGuid(guid, text) : null;
+
+	/// <summary>Parsed text as <see cref="ShortGuid"/>, throws exception if not valid Guid/ShortGuid.</summary>
+	/// <param name="text">Text with ShortGuid or Guid.</param>
+	/// <returns><see cref="ShortGuid"/>.</returns>
+	public static ShortGuid Parse(string text)
+	{
+		ParseShortGuid(text, out var guid, out text);
+		return new ShortGuid(guid, text);
+	}
+
+	/// <summary>Convert Guid to <see cref="ShortGuid"/>.</summary>
+	/// <param name="guid">Guid.</param>
+	/// <returns><see cref="ShortGuid"/>.</returns>
+	public static ShortGuid Create(Guid guid) => new(guid);
 
 	/// <summary>
 	/// Returns a value indicating whether this instance and a 
@@ -101,21 +125,11 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// </summary>
 	/// <param name="guid">The Guid to encode</param>
 	/// <returns>Encoded short GUID as string.</returns>
-	private static unsafe string Encode(Guid guid)
-	{
-		#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-
-		return string.Create(
-			Length, (IntPtr)(&guid), (span, guidP) => {
-				Base64.Url.Encode(new ReadOnlySpan<byte>((byte*)guidP, sizeof(Guid)), span);
+	private static unsafe string Encode(Guid guid) =>
+		Polyfill.CreateFixedString(
+			Length, (IntPtr)(&guid), static (span, guidP) => {
+				Codec.Encode(new ReadOnlySpan<byte>((byte*)guidP, sizeof(Guid)), span);
 			});
-
-		#else
-		
-		return Base64.Url.Encode(new ReadOnlySpan<byte>(&guid, sizeof(Guid)));
-
-		#endif
-	}
 
 	/// <summary>Decodes given base64 string to Guid.</summary>
 	/// <param name="value">The base64 encoded string of a Guid</param>
@@ -126,7 +140,7 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 			return Guid.Empty;
 
 		Guid result;
-		Base64.Url.Decode(value.AsSpan(), new Span<byte>(&result, sizeof(Guid)));
+		Codec.Decode(value.AsSpan(), new Span<byte>(&result, sizeof(Guid)));
 		return result;
 	}
 
@@ -161,4 +175,61 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <param name="guid">Guid.</param>
 	/// <returns>ShortGuid</returns>
 	public static implicit operator ShortGuid(Guid guid) => new(guid);
+
+	private static bool ParseShortGuid(
+		string input,
+		out Guid guid, out string text,
+		bool failOrError = true)
+	{
+		// if text is empty assume Guid.Empty (well, debatable)
+		// is text looks like short guid assume short guid
+		// if not, try parse as normal guid 
+		// if still nothing throw exception
+		if (string.IsNullOrWhiteSpace(input))
+		{
+			guid = Guid.Empty;
+			text = EmptyText;
+			return true;
+		}
+
+		var format = Validate(input);
+
+		if (format == ShortGuidFormat.Strict)
+		{
+			guid = Decode(input);
+			text = input;
+			return true;
+		}
+
+		if (format == ShortGuidFormat.Valid)
+		{
+			guid = Decode(input);
+		}
+		else if (!Guid.TryParse(input, out guid))
+		{
+			if (failOrError) ThrowCannotParseGuid();
+			text = null;
+			return false;
+		}
+
+		// this is slowing it down, it would be much better to pass ShortGuids as Strict
+		text = Encode(guid);
+		return true;
+	}
+
+	private static void ThrowCannotParseGuid() =>
+		throw new ArgumentException("Provided value is neither Guid nor ShortGuid");
+
+	private enum ShortGuidFormat { Invalid, Valid, Strict }
+
+	private static ShortGuidFormat Validate(string text)
+	{
+		if (text is null) return ShortGuidFormat.Invalid;
+
+		var span = Codec.StripPadding(text.AsSpan());
+		return
+			span.Length != Length || Codec.ErrorIndex(span) >= 0 ? ShortGuidFormat.Invalid :
+			text.Length == Length ? ShortGuidFormat.Strict :
+			ShortGuidFormat.Valid;
+	}
 }

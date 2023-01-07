@@ -61,19 +61,19 @@ Yes, it is not fair comparison, as `HexConverter` does not have such mode, but a
 |--------------:|-------:|-------------:|------:|
 |   Base16_Span |     32 |     23.55 ns |  0.39 |
 | Base16_String |     32 |     30.27 ns |  0.50 |
-|  HexConverter |     32 |     60.20 ns |  1.00 |
+|     Framework |     32 |     60.20 ns |  1.00 |
 |               |        |              |       |
 |   Base16_Span |    256 |     47.02 ns |  0.12 |
 | Base16_String |    256 |     62.10 ns |  0.15 |
-|  HexConverter |    256 |    402.66 ns |  1.00 |
+|     Framework |    256 |    402.66 ns |  1.00 |
 |               |        |              |       |
 |   Base16_Span |   4096 |    493.34 ns |  0.08 |
 | Base16_String |   4096 |    638.46 ns |  0.10 |
-|  HexConverter |   4096 |  6,118.14 ns |  1.00 |
+|     Framework |   4096 |  6,118.14 ns |  1.00 |
 |               |        |              |       |
 |   Base16_Span |  65536 |  7,626.52 ns |  0.08 |
 | Base16_String |  65536 |  9,258.14 ns |  0.10 |
-|  HexConverter |  65536 | 96,583.53 ns |  1.00 |
+|     Framework |  65536 | 96,583.53 ns |  1.00 |
 
 This is because `HexConverter` does not have SIMD decoder implementation (yet, I believe), while `BaseX` does.
 
@@ -92,7 +92,61 @@ guid.ToByteArray().ToBase64().Replace("+", "-").Replace("/", "_").Replace("=", "
 is even slower.
 If you do this from time to time it might be good enough, but not in tight loop in the heart of your system.
 
-So I've created Base64 codec which allows to configure what characters are used as digits, and what character should be used (if at all) for padding.
+So I've created Base64 codec which allows to configure what characters are used as digits, 
+and what character should be used (if at all) for padding. It is also a little bit faster (up to ~2x) 
+and has allocation free mode.
+
+### Base64 decoding
+
+Performance-wise I can see some moderate improvement, between 30% to 50%, vs .NET default implementation.
+Bigger the input, the better. On top of it allows to use `Span<byte>` to avoid allocations.
+
+|        Method | Length |          Mean | Ratio |
+|-------------- |------- |--------------:|------:|
+|   Base64_Span |     16 |      30.69 ns |  0.58 |
+| Base64_String |     16 |      38.82 ns |  0.74 |
+|     Framework |     16 |      52.64 ns |  1.00 |
+|               |        |               |       |
+|   Base64_Span |   1337 |     826.11 ns |  0.38 |
+| Base64_String |   1337 |     926.92 ns |  0.43 |
+|     Framework |   1337 |   2,171.19 ns |  1.00 |
+|               |        |               |       |
+|   Base64_Span |  65536 |  39,712.84 ns |  0.42 |
+| Base64_String |  65536 |  42,912.79 ns |  0.46 |
+|     Framework |  65536 |  93,885.76 ns |  1.00 |
+
+### Base64 encoding
+
+It seems that framework implementation of Base64 encoding is very fast for vary short strings.
+I did take a look what I do differently, and it seems that it uses some internal method to allocate
+new string: `string.FastAllocateString(int)`. Unfortunately, it is not exposed publicly, so I can't use it.
+
+It is actually possible to do something similar, 
+
+```csharp
+var target = new string('\0', length);
+fixed (char* targetP = target) 
+    codec.Encode(source, new Span<char>(targetP, target.Length));
+```
+
+but I'm not sure if it is safe. You can do it yourself though if you're feeling lucky!
+
+|        Method | Length |          Mean | Ratio |
+|-------------- |------- |--------------:|------:|
+|   Base64_Span |     16 |      22.31 ns |  0.79 |
+| Base64_String |     16 |      37.94 ns |  1.35 |
+|     Framework |     16 |      28.11 ns |  1.00 |
+|               |        |               |       |
+|   Base64_Span |   1337 |     723.81 ns |  0.51 |
+| Base64_String |   1337 |     874.75 ns |  0.63 |
+|     Framework |   1337 |   1,408.38 ns |  1.00 |
+|               |        |               |       |
+|   Base64_Span |  65536 |  35,438.87 ns |  0.30 |
+| Base64_String |  65536 |  94,941.04 ns |  0.81 |
+|     Framework |  65536 | 118,610.53 ns |  1.00 |
+
+For bigger strings `Base64` is faster (roughly 20% less time) as allocation speed means less, 
+and as usual allocation free mode is much faster (as there is no allocation at all).
 
 ## Base85
 

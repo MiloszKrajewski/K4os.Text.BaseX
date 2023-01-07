@@ -1,4 +1,9 @@
-## 0.0.5 (2023/01/01)
+## 0.0.6 (2023/01/06)
+* IMPROVED: ShortGuid interface (added .Parse, .TryParse, .CanParse, .Create)
+* IMPROVED: ShortGuid parsing (less allocations)
+* IMPROVED: Better string allocation (affect all encoding)
+
+## 0.0.5 (2023/01/04)
 * IMPROVED: Base16 can use SIMD (SSE2/AVX2) instructions to speed up encoding/decoding
 
 ## 0.0.4 (2021/08/13)
