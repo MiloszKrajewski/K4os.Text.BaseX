@@ -102,7 +102,7 @@ Performance-wise I can see some moderate improvement, between 30% to 50%, vs .NE
 Bigger the input, the better. On top of it allows to use `Span<byte>` to avoid allocations.
 
 |        Method | Length |          Mean | Ratio |
-|-------------- |------- |--------------:|------:|
+|--------------:|-------:|--------------:|------:|
 |   Base64_Span |     16 |      30.69 ns |  0.58 |
 | Base64_String |     16 |      38.82 ns |  0.74 |
 |     Framework |     16 |      52.64 ns |  1.00 |
@@ -132,7 +132,7 @@ fixed (char* targetP = target)
 but I'm not sure if it is safe. You can do it yourself though if you're feeling lucky!
 
 |        Method | Length |          Mean | Ratio |
-|-------------- |------- |--------------:|------:|
+|--------------:|-------:|--------------:|------:|
 |   Base64_Span |     16 |      22.31 ns |  0.79 |
 | Base64_String |     16 |      37.94 ns |  1.35 |
 |     Framework |     16 |      28.11 ns |  1.00 |
