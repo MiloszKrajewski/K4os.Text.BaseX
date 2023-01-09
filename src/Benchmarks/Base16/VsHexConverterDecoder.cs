@@ -30,7 +30,7 @@ public class VsHexConverterDecoder
 	[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
 	// ReSharper disable once UnusedParameter.Local
 	private static void NoOp<T>(T _) { }
-	
+
 	[Benchmark]
 	public void Base16_Span() { _vector.Decode(_encoded, _decoded); }
 
@@ -38,5 +38,5 @@ public class VsHexConverterDecoder
 	public void Base16_String() { NoOp(_vector.Decode(_encoded)); }
 
 	[Benchmark(Baseline = true)]
-	public void HexConverter() { NoOp(Convert.FromHexString(_encoded)); }
+	public void Framework() { NoOp(Convert.FromHexString(_encoded)); }
 }
