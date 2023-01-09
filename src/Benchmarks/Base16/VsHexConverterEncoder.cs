@@ -5,6 +5,7 @@ using K4os.Text.BaseX;
 
 namespace Benchmarks.Base16;
 
+[MemoryDiagnoser]
 public class VsHexConverterEncoder
 {
 	private byte[] _original;
@@ -27,13 +28,19 @@ public class VsHexConverterEncoder
 	[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
 	// ReSharper disable once UnusedParameter.Local
 	private static void NoOp<T>(T _) { }
-	
-	[Benchmark]
-	public void Base16_Span() { _vector.Encode(_original, _encoded); }
 
-	[Benchmark]
-	public void Base16_String() { NoOp(_vector.Encode(_original)); }
+//	[Benchmark]
+//	public void Base16_Span() { _vector.Encode(_original, _encoded); }
+//
+//	[Benchmark]
+//	public void Base16_String() { NoOp(_vector.Encode(_original)); }
 
 	[Benchmark(Baseline = true)]
 	public void HexConverter() { NoOp(Convert.ToHexString(_original)); }
+
+	[Benchmark]
+	public void ToStringAndReplace()
+	{
+		NoOp(BitConverter.ToString(_original).Replace("-", string.Empty));
+	}
 }

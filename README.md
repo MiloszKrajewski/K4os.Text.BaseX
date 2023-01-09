@@ -10,7 +10,7 @@ I've implemented them for few reasons...
 I couldn't find any good implementation of Base16/Hex conversion in .NET, while this is something I actually use quite a lot
 and I've always implemented it in projects (`internal` helper methods). 
 
-Honestly, if you search StackOverflow for 'byte[] to hex string' and top answer is:
+Honestly, if you search StackOverflow for 'byte[] to hex string' and [top answer](https://stackoverflow.com/questions/623104/byte-to-hex-string) is:
 ```
 var hex = BitConverter.ToString(data).Replace("-", string.Empty);
 ```
@@ -19,9 +19,27 @@ then something is really really wrong.
 Above approach is 100s times slower than `BaseX` implementation.
 
 To be frank, Since .NET 5 there are very efficient `Convert.FromHexString` and `Convert.ToHexString` methods 
-(actual implementation is in `HexConverter`, 
-see [here](https://source.dot.net/#System.Net.Primitives/src/libraries/Common/src/System/HexConverter.cs)), 
-so `BaseX` library is not that "revolutionary" anymore, but before .NET 5 is might be a life saver.
+(actual implementation is in `HexConverter`, see 
+[here](https://source.dot.net/#System.Net.Primitives/src/libraries/Common/src/System/HexConverter.cs)). 
+
+|             Method | Length |            Mean | Ratio | Alloc Ratio |
+|-------------------:|-------:|----------------:|------:|------------:|
+|       HexConverter |     32 |        27.18 ns |  1.00 |        1.00 |
+| ToStringAndReplace |     32 |       456.46 ns | 16.79 |        2.42 |
+|                    |        |                 |       |             |
+|       HexConverter |    256 |        95.96 ns |  1.00 |        1.00 |
+| ToStringAndReplace |    256 |     3,307.41 ns | 34.41 |        2.49 |
+|                    |        |                 |       |             |
+|       HexConverter |   4096 |     1,224.75 ns |  1.00 |        1.00 |
+| ToStringAndReplace |   4096 |    57,062.27 ns | 46.54 |        2.50 |
+|                    |        |                 |       |             |
+|       HexConverter |  65536 |    98,964.28 ns |  1.00 |        1.00 |
+| ToStringAndReplace |  65536 | 1,277,662.01 ns | 13.32 |        2.50 |
+
+As you can see, `HexConverter` is up to ~50x faster than `ToString().Replace()` and allocates 2.5x less memory.
+
+So, since `HexConverter` was added in .NET 5 `BaseX` library is not that "revolutionary" anymore, 
+but before .NET 5 is might be a life saver.
 
 Same as `HexConverter`, it has SIMD (SSE2/SSSE3/AVX2) encoder implementations giving it roughly the same performance, 
 although `HexConverter` always allocates a new string, while `BaseX` can store output in a provided `Span<char>` 
@@ -61,19 +79,19 @@ Yes, it is not fair comparison, as `HexConverter` does not have such mode, but a
 |--------------:|-------:|-------------:|------:|
 |   Base16_Span |     32 |     23.55 ns |  0.39 |
 | Base16_String |     32 |     30.27 ns |  0.50 |
-|     Framework |     32 |     60.20 ns |  1.00 |
+|  HexConverter |     32 |     60.20 ns |  1.00 |
 |               |        |              |       |
 |   Base16_Span |    256 |     47.02 ns |  0.12 |
 | Base16_String |    256 |     62.10 ns |  0.15 |
-|     Framework |    256 |    402.66 ns |  1.00 |
+|  HexConverter |    256 |    402.66 ns |  1.00 |
 |               |        |              |       |
 |   Base16_Span |   4096 |    493.34 ns |  0.08 |
 | Base16_String |   4096 |    638.46 ns |  0.10 |
-|     Framework |   4096 |  6,118.14 ns |  1.00 |
+|  HexConverter |   4096 |  6,118.14 ns |  1.00 |
 |               |        |              |       |
 |   Base16_Span |  65536 |  7,626.52 ns |  0.08 |
 | Base16_String |  65536 |  9,258.14 ns |  0.10 |
-|     Framework |  65536 | 96,583.53 ns |  1.00 |
+|  HexConverter |  65536 | 96,583.53 ns |  1.00 |
 
 This is because `HexConverter` does not have SIMD decoder implementation (yet, I believe), while `BaseX` does.
 
