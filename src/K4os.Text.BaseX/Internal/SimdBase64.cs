@@ -6,7 +6,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -31,24 +30,6 @@ internal class SimdBase64: SimdTools
 			targetLength, vectorSize, 
 			vectorSize);
 	
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int AdjustBeforeDecode(
-		bool support, int sourceLength, int targetLength, uint vectorSize) =>
-		AdjustBeforeTransform(
-			support, 
-			sourceLength, vectorSize, 
-			targetLength, vectorSize / 4 * 3, 
-			vectorSize);
-
-	/// <summary>
-	/// Encodes to Base64 in 12 bytes chunks (16 characters output).
-	/// Returns number of 3 bytes (or 4 characters) chunks encoded.
-	/// </summary>
-	/// <param name="source">Source buffer address.</param>
-	/// <param name="sourceLength">Source buffer length.</param>
-	/// <param name="target">Target buffer address.</param>
-	/// <param name="targetLength">Target buffer address.</param>
-	/// <returns>Number of 3 bytes (or 4 characters) chunks encoded.</returns>
 	public static unsafe int EncodeSse(
 		byte* source, int sourceLength,
 		char* target, int targetLength)
@@ -146,7 +127,51 @@ internal class SimdBase64: SimdTools
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	[SuppressMessage("ReSharper", "IdentifierTypo")]
+	public static int AdjustBeforeDecode(
+		bool support, int sourceLength, int targetLength, uint vectorSize) =>
+		AdjustBeforeTransform(
+			support, 
+			sourceLength, vectorSize, 
+			targetLength, vectorSize / 4 * 3, 
+			vectorSize);
+	
+	/// <summary>
+	/// Encodes to Base64 in 12 bytes chunks (16 characters output).
+	/// Returns number of 3 bytes (or 4 characters) chunks encoded.
+	/// </summary>
+	/// <param name="source">Source buffer address.</param>
+	/// <param name="sourceLength">Source buffer length.</param>
+	/// <param name="target">Target buffer address.</param>
+	/// <param name="targetLength">Target buffer address.</param>
+	/// <returns>Number of 3 bytes (or 4 characters) chunks encoded.</returns>
+	public static unsafe int DecodeSse(
+		char* source, int sourceLength,
+		byte* target, int targetLength)
+	{
+		sourceLength = AdjustBeforeDecode(
+			Ssse3.IsSupported, sourceLength, targetLength, (uint)Vector128<byte>.Count);
+		if (sourceLength <= 0) return 0;
+
+		var sourceStart = source;
+		var sourceLimit = source + sourceLength;
+
+		while (source < sourceLimit)
+		{
+			DecodeSse(source, target);
+			source += 16;
+			target += 12;
+		}
+
+		return (int)((source - sourceStart) / 4);
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static unsafe void DecodeSse(char* source, byte* target)
+	{
+		SaveBytes128(DecodeSse(FromAscii(LoadAscii128(source))), target);
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Vector128<byte> FromAscii(Vector128<byte> vector)
 	{
 		// __m128i lookup_pshufb(const __m128i input)
@@ -282,42 +307,6 @@ internal class SimdBase64: SimdTools
 		// // lower 12 bytes contains the result
 		// const __m128i shuffled = _mm_shuffle_epi8(merged, shuf);
 		return Ssse3.Shuffle(merged.AsSByte(), shuffle).AsByte();
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe void DecodeSse(char* source, byte* target)
-	{
-		SaveBytes128(DecodeSse(FromAscii(LoadAscii128(source))), target);
-	}
-
-	/// <summary>
-	/// Encodes to Base64 in 12 bytes chunks (16 characters output).
-	/// Returns number of 3 bytes (or 4 characters) chunks encoded.
-	/// </summary>
-	/// <param name="source">Source buffer address.</param>
-	/// <param name="sourceLength">Source buffer length.</param>
-	/// <param name="target">Target buffer address.</param>
-	/// <param name="targetLength">Target buffer address.</param>
-	/// <returns>Number of 3 bytes (or 4 characters) chunks encoded.</returns>
-	public static unsafe int DecodeSse(
-		char* source, int sourceLength,
-		byte* target, int targetLength)
-	{
-		sourceLength = AdjustBeforeDecode(
-			Ssse3.IsSupported, sourceLength, targetLength, (uint)Vector128<byte>.Count);
-		if (sourceLength <= 0) return 0;
-
-		var sourceStart = source;
-		var sourceLimit = source + sourceLength;
-
-		while (source < sourceLimit)
-		{
-			DecodeSse(source, target);
-			source += 16;
-			target += 12;
-		}
-
-		return (int)((source - sourceStart) / 4);
 	}
 
 	public static unsafe int EncodeAvx2(

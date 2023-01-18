@@ -10,6 +10,7 @@ namespace K4os.Text.BaseX;
 
 #if NET5_0_OR_GREATER
 
+/// <summary>Base64 codec implemented with SIMD instructions.</summary>
 public class SimdBase64Codec: Base64Codec
 {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -27,6 +28,7 @@ public class SimdBase64Codec: Base64Codec
 		return written;
 	}
 
+	/// <inheritdoc />
 	protected override unsafe int EncodeImpl(
 		byte* source, int sourceLength,
 		char* target, int targetLength)
@@ -58,7 +60,7 @@ public class SimdBase64Codec: Base64Codec
 
 		return written;
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static unsafe int UpdateAfterDecode(
 		int chunks,
@@ -73,7 +75,8 @@ public class SimdBase64Codec: Base64Codec
 		targetLength -= written;
 		return written;
 	}
-	
+
+	/// <inheritdoc />
 	protected override unsafe int DecodeImpl(
 		char* source, int sourceLength,
 		byte* target, int targetLength)
@@ -105,7 +108,6 @@ public class SimdBase64Codec: Base64Codec
 
 		return written;
 	}
-
 }
 
 #endif

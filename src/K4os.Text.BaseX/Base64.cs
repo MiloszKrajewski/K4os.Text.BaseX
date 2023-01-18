@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
+using K4os.Text.BaseX.Internal;
 
 namespace K4os.Text.BaseX;
 
@@ -45,17 +46,21 @@ public static class Base64
 	public static byte[] FromBase64(this string encoded) => Default.Decode(encoded);
 
 	[SuppressMessage("ReSharper", "UnusedParameter.Local")]
-	private static Base64Codec TryCreateSimdCodec(
-		char extra1, char extra2, bool usePadding, char paddingChar) => null;
+	private static Base64Codec TryCreateSimdCodec()
+	{
+		#if NET5_0_OR_GREATER
+		if (SimdSettings.IsSimdSupported) 
+			return new SimdBase64Codec();
+		#endif
+		return null;
+	}
 
 	private static Base64Codec CreateDefaultCodec() =>
-		TryCreateSimdCodec('+', '/', true, '=') ??
+		TryCreateSimdCodec() ??
 		new Base64Codec(DefaultDigits, true, '=');
 
 	private static Base64Codec CreateUrlCodec() =>
-		TryCreateSimdCodec('-', '_', false, '=') ??
 		new Base64Codec(UrlDigits, false, '=');
-
 
 	private static Base64Codec CreateSerializerCodec()
 	{
