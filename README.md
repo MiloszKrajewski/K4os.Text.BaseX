@@ -137,7 +137,11 @@ Bigger the input, the better. On top of it allows to use `Span<byte>` to avoid a
 
 It seems that framework implementation of Base64 encoding is very fast for vary short strings.
 I did take a look what I do differently, and it seems that it uses some internal method to allocate
-new string: `string.FastAllocateString(int)`. Unfortunately, it is not exposed publicly, so I can't use it.
+new string: `string.FastAllocateString(int)`.
+
+This 1.35 performance hit for very small strings [comes exactly from this](https://gist.github.com/svick/d2bd0cffb6f14fb1a2f1e1978d8ff883#file-results-md).
+
+Unfortunately, `FastAllocateString` is not exposed publicly, so I can't use it.
 
 It is actually possible to do something similar, 
 
@@ -147,7 +151,12 @@ fixed (char* targetP = target)
     codec.Encode(source, new Span<char>(targetP, target.Length));
 ```
 
-but I'm not sure if it is safe. You can do it yourself though if you're feeling lucky!
+but I'm not sure if it is safe (well, it seems it is with current .NET version, but it isn't and 
+won't be supported). For example, I can imagine that in future .NET version it may return reference 
+to already existing string, as per definition strings are immutable. 
+
+[It is strongly discouraged by .NET team though](https://github.com/dotnet/runtime/issues/36989) and
+
 
 |        Method | Length |          Mean | Ratio |
 |--------------:|-------:|--------------:|------:|

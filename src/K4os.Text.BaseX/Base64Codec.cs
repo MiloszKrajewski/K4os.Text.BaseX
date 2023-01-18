@@ -11,7 +11,7 @@ public class Base64Codec: BaseXCodec
 
 	/// <summary>
 	/// Creates default Base64 codec.
-	/// <see cref="Base64"/> class for some default codecs.
+	/// See <see cref="Base64"/> class for some default codecs.
 	/// Please note, this operation is relatively slow (to use in hot spots) so
 	/// prefer using codecs as static/singletons.
 	/// </summary>
@@ -19,7 +19,7 @@ public class Base64Codec: BaseXCodec
 
 	/// <summary>
 	/// Creates default Base64 codec with or without padding.
-	/// <see cref="Base64"/> class for some default codecs.
+	/// See <see cref="Base64"/> class for some default codecs.
 	/// Please note, this operation is relatively slow (to use in hot spots) so
 	/// prefer using codecs as static/singletons.
 	/// </summary>
@@ -56,9 +56,9 @@ public class Base64Codec: BaseXCodec
 	{
 		if (sourceLength <= 0) return 0;
 
-		var blocks = sourceLength / 3;
-		var tail = sourceLength % 3;
-		return blocks * 4 + (tail == 0 ? 0 : _usePadding ? 4 : tail + 1);
+		var blocks = (uint)sourceLength / 3;
+		var tail = (uint)sourceLength % 3;
+		return (int)(blocks * 4 + (tail == 0 ? 0 : _usePadding ? 4 : tail + 1));
 	}
 
 	/// <inheritdoc />
@@ -66,13 +66,13 @@ public class Base64Codec: BaseXCodec
 	{
 		if (sourceLength <= 0) return 0;
 
-		var blocks = sourceLength / 4;
-		var tail = sourceLength % 4;
+		var blocks = (uint)sourceLength / 4;
+		var tail = (uint)sourceLength % 4;
 		if (tail == 1)
 			throw new ArgumentException(
 				"Encoded buffer is corrupted. Is it properly padded?");
 
-		return blocks * 3 + (tail == 0 ? 0 : tail - 1);
+		return (int)(blocks * 3 + (tail == 0 ? 0 : tail - 1));
 	}
 
 	/// <inheritdoc />
@@ -110,14 +110,14 @@ public class Base64Codec: BaseXCodec
 			var blocks = EncodeBlocks(map, source, sourceLength, target);
 			source += blocks * 3;
 			target += blocks * 4;
-			target += EncodeTail(map, source, sourceLength, target);
+			target += EncodeTail(map, source, (uint)sourceLength % 3, target);
 
 			return (int)(target - targetStart);
 		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe uint EncodeBlocks(
+	private protected static unsafe uint EncodeBlocks(
 		char* map, byte* source, int sourceLength, char* target)
 	{
 		var blocks = (uint)sourceLength / 3;
@@ -134,9 +134,9 @@ public class Base64Codec: BaseXCodec
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private unsafe uint EncodeTail(char* map, byte* source, int sourceLength, char* target)
+	private protected unsafe uint EncodeTail(
+		char* map, byte* source, uint tail, char* target)
 	{
-		var tail = (uint)sourceLength % 3;
 		if (tail == 0) return 0;
 
 		// set0 = set1 = read0 = true
@@ -165,7 +165,8 @@ public class Base64Codec: BaseXCodec
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe void Encode4(char* map, byte* source, char* target)
+	private protected static unsafe void Encode4(
+		char* map, byte* source, char* target)
 	{
 		var b0 = *(source + 0);
 		var b1 = *(source + 1);
@@ -188,14 +189,14 @@ public class Base64Codec: BaseXCodec
 			var blocks = DecodeBlocks(map, source, sourceLength, target);
 			source += blocks * 4;
 			target += blocks * 3;
-			target += DecodeTail(map, source, sourceLength, target);
+			target += DecodeTail(map, source, (uint)sourceLength % 4, target);
 
 			return (int)(target - targetStart);
 		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe uint DecodeBlocks(
+	private protected static unsafe uint DecodeBlocks(
 		byte* map, char* source, int sourceLength, byte* target)
 	{
 		var blocks = (uint)sourceLength / 4;
@@ -215,19 +216,18 @@ public class Base64Codec: BaseXCodec
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe int DecodeTail(
-		byte* map, char* source, int sourceLength, byte* target)
+	private protected static unsafe uint DecodeTail(
+		byte* map, char* source, uint tail, byte* target)
 	{
-		var overflow = sourceLength % 4;
 		// overflow can be 0, 2, 3, overflow == 1 is actually "corrupted", 
 		// for performance reasons we don't care about this here 
-		if (overflow <= 1) return 0;
+		if (tail <= 1) return 0;
 
 		// overflow = 2234
 		// set0 = get0 = get1 = always
 		// set1 = get2 = overflow > 2
 
-		var set1 = overflow > 2;
+		var set1 = tail > 2;
 
 		var b0 = Decode1(map, (byte)*(source + 0));
 		var b1 = Decode1(map, (byte)*(source + 1));
@@ -243,7 +243,8 @@ public class Base64Codec: BaseXCodec
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static unsafe void Decode4(byte* map, char* source, byte* target)
+	private protected static unsafe void Decode4(
+		byte* map, char* source, byte* target)
 	{
 		var b0 = Decode1(map, (byte)*(source + 0));
 		var b1 = Decode1(map, (byte)*(source + 1));

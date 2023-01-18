@@ -1,35 +1,33 @@
 using System;
 using BenchmarkDotNet.Attributes;
+using K4os.Text.BaseX;
+using BaselineCodec = K4os.Text.BaseX.Base64Codec;
 
-namespace Benchmarks.Base64
+namespace Benchmarks.Base64;
+
+public class Encoder64
 {
-	using BaselineCodec = K4os.Text.BaseX.Base64Codec;
-	using ChallengerCodec = K4os.Text.BaseX.Base64Codec;
+	private static BaseXCodec _baseline;
+	private static BaseXCodec _challenger;
+	private byte[] _source;
+	private char[] _target;
 
-	public class Encoder64
+	[Params(16, 1337, 0x10000)]
+	public int Length { get; set; }
+
+	[GlobalSetup]
+	public void Setup()
 	{
-		private static BaselineCodec _baseline;
-		private static ChallengerCodec _challenger;
-		private byte[] _source;
-		private char[] _target;
-
-		[Params(16, 1337)]
-		public int Length { get; set; }
-
-		[GlobalSetup]
-		public void Setup()
-		{
-			_baseline = new BaselineCodec();
-			_challenger = new ChallengerCodec();
-			_source = new byte[Length];
-			new Random().NextBytes(_source);
-			_target = new char[_baseline.EncodedLength(_source)];
-		}
-
-		[Benchmark]
-		public void Baseline() { _baseline.Encode(_source, _target); }
-
-		[Benchmark]
-		public void Challenger() { _challenger.Encode(_source, _target); }
+		_baseline = new BaselineCodec();
+		_challenger = new SimdBase64Codec();
+		_source = new byte[Length];
+		new Random().NextBytes(_source);
+		_target = new char[_baseline.EncodedLength(_source)];
 	}
+
+	[Benchmark(Baseline = true)]
+	public void Baseline() { _baseline.Encode(_source, _target); }
+
+	[Benchmark]
+	public void Challenger() { _challenger.Encode(_source, _target); }
 }
