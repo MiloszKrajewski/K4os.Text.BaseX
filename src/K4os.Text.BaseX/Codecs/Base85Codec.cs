@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace K4os.Text.BaseX;
+namespace K4os.Text.BaseX.Codecs;
 
 /// <summary>
 /// Base85 codec. This is not full Ascii85 implementation is it does not

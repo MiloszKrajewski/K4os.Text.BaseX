@@ -2,18 +2,56 @@
 
 [![NuGet Stats](https://img.shields.io/nuget/v/K4os.Text.BaseX.svg)](https://www.nuget.org/packages/K4os.Text.BaseX)
 
-`K4os.Text.BaseX` is an implementation of Base16, Base64 and Base85 codecs for .NET/.NET core.
-I've implemented them for few reasons...
+`K4os.Text.BaseX` is an implementation of **Base16**, **Base64** and **Base85** codecs for .NET/.NET core.
+It also provides fast implementation of **ShortGuid** (URL friendly GUID).
+
+There are many caveats to this table below, and detailed results are more accurate, 
+but s a teaser I can show some benchmarks:
+
+|      Method | Algorithm | Operation | Length |      Mean | Ratio |
+|------------:|----------:|----------:|-------:|----------:|------:|
+| Framework * |    Base16 |    Encode |  65536 | 89.707 us |  1.00 |
+|     Default |    Base16 |    Encode |  65536 | 33.508 us |  0.38 |
+|        Simd |    Base16 |    Encode |  65536 |  6.191 us |  0.07 |
+|             |           |           |        |           |       |
+| Framework * |    Base16 |    Decode |  65536 | 94.222 us |  1.00 |
+|     Default |    Base16 |    Decode |  65536 | 45.265 us |  0.48 |
+|        Simd |    Base16 |    Decode |  65536 |  7.058 us |  0.07 |
+|             |           |           |        |           |       |
+|   Framework |    Base64 |    Encode |  65536 | 59.664 us |  1.00 |
+|     Default |    Base64 |    Encode |  65536 | 34.547 us |  0.58 |
+|      Lookup |    Base64 |    Encode |  65536 | 27.226 us |  0.46 |
+|        Simd |    Base64 |    Encode |  65536 |  7.934 us |  0.13 |
+|             |           |           |        |           |       |
+|   Framework |    Base64 |    Decode |  65536 | 56.027 us |  1.00 |
+|     Default |    Base64 |    Decode |  65536 | 40.418 us |  0.72 |
+|      Lookup |    Base64 |    Decode |  65536 | 33.589 us |  0.60 |
+|        Simd |    Base64 |    Decode |  65536 |  6.196 us |  0.11 |
+
+> **NOTE**: These results are little biased, as .NET Base16 implementation does not 
+> have allocation free encoding, so results are tainted by GC, but it is a
+> valid point though: why it does not have allocation free encoding?
+> The other bias is the fact that these measurements are done on a quite
+> large buffer so it favors SIMD implementation.
+
+Anyway, **Base16** is around **14x** faster than .NET implementation, 
+while **Base64** is roughly **9x** faster.
+
+I've started implementing them for few reasons...
 
 ## Base16
 
-I couldn't find any good implementation of Base16/Hex conversion in .NET, while this is something I actually use quite a lot
-and I've always implemented it in projects (`internal` helper methods). 
+I couldn't find any good implementation of Base16/Hex conversion in .NET, 
+while this is something I actually use quite a lot and I've always implemented 
+it in projects (`internal` helper methods). 
 
-Honestly, if you search StackOverflow for 'byte[] to hex string' and [top answer](https://stackoverflow.com/questions/623104/byte-to-hex-string) is:
-```
+Honestly, if you search StackOverflow for 'byte[] to hex string' and 
+[top answer](https://stackoverflow.com/questions/623104/byte-to-hex-string) is:
+
+```csharp
 var hex = BitConverter.ToString(data).Replace("-", string.Empty);
 ```
+
 then something is really really wrong.
 
 Above approach is 100s times slower than `BaseX` implementation.
@@ -137,7 +175,11 @@ Bigger the input, the better. On top of it allows to use `Span<byte>` to avoid a
 
 It seems that framework implementation of Base64 encoding is very fast for vary short strings.
 I did take a look what I do differently, and it seems that it uses some internal method to allocate
-new string: `string.FastAllocateString(int)`. Unfortunately, it is not exposed publicly, so I can't use it.
+new string: `string.FastAllocateString(int)`.
+
+This 1.35 performance hit for very small strings [comes exactly from this](https://gist.github.com/svick/d2bd0cffb6f14fb1a2f1e1978d8ff883#file-results-md).
+
+Unfortunately, `FastAllocateString` is not exposed publicly, so I can't use it.
 
 It is actually possible to do something similar, 
 
@@ -147,7 +189,12 @@ fixed (char* targetP = target)
     codec.Encode(source, new Span<char>(targetP, target.Length));
 ```
 
-but I'm not sure if it is safe. You can do it yourself though if you're feeling lucky!
+but I'm not sure if it is safe (well, it seems it is with current .NET version, but it isn't and 
+won't be supported). For example, I can imagine that in future .NET version it may return reference 
+to already existing string, as per definition strings are immutable. 
+
+[It is strongly discouraged by .NET team though](https://github.com/dotnet/runtime/issues/36989) and
+
 
 |        Method | Length |          Mean | Ratio |
 |--------------:|-------:|--------------:|------:|
@@ -165,6 +212,63 @@ but I'm not sure if it is safe. You can do it yourself though if you're feeling 
 
 For bigger strings `Base64` is faster (roughly 20% less time) as allocation speed means less, 
 and as usual allocation free mode is much faster (as there is no allocation at all).
+
+### Further improvements
+
+Please note, all above measurements were done Framework (HexConverter) vs
+my Baseline (Base64Codec). And as shown my baseline codec is faster except
+for very small strings where string allocation is the bottleneck. In all
+cases `Span<byte>` version is much faster than the one producing `string`, so
+try to use it.
+
+String allocation aside, can we do better in transformation itself? Yes we can.
+
+As **baseline** is out bread-and-butter `Base64Codec` I have created two additional
+ones so far.
+
+`LookupBase64Code` is build on top large lookup tables. It is slightly faster than
+baseline (around 20% less time, meaning 1.25x faster) but comes at the price of 
+additional memory usage (it has ~1MB of lookup tables). 
+
+`SimdBase64Code` is using SIMD instructions (SSE3 only at the moment) at is much much 
+faster (around 75% less time, meaning 4x faster). It comes at the price of additional
+fixed cost use to determine how much can be processed by SIMD and how much needs to 
+be processed by "usual" means, therefore there will be no performance gain for very
+small strings.
+
+### Baseline vs Lookup vs SSE encoders
+
+|   Method | Length |         Mean | Ratio |
+|---------:|-------:|-------------:|------:|
+| Baseline |     16 |     23.01 ns |  1.00 |
+|   Lookup |     16 |     19.69 ns |  0.86 |
+|      Sse |     16 |     22.96 ns |  1.00 |
+|          |        |              |       |
+| Baseline |   1337 |    730.29 ns |  1.00 |
+|   Lookup |   1337 |    578.59 ns |  0.79 |
+|      Sse |   1337 |    180.76 ns |  0.25 |
+|          |        |              |       |
+| Baseline |  65536 | 34,677.54 ns |  1.00 |
+|   Lookup |  65536 | 26,809.25 ns |  0.77 |
+|      Sse |  65536 |  7,953.07 ns |  0.23 |
+
+### Baseline vs Lookup vs SSE decoders
+
+|   Method | Length |         Mean | Ratio |
+|---------:|-------:|-------------:|------:|
+| Baseline |     16 |     28.01 ns |  1.00 |
+|   Lookup |     16 |     29.70 ns |  1.06 |
+|      Sse |     16 |     28.72 ns |  1.03 |
+|          |        |              |       |
+| Baseline |   1337 |    833.49 ns |  1.00 |
+|   Lookup |   1337 |    695.32 ns |  0.83 |
+|      Sse |   1337 |    160.73 ns |  0.19 |
+|          |        |              |       |
+| Baseline |  65536 | 39,707.10 ns |  1.00 |
+|   Lookup |  65536 | 33,159.08 ns |  0.84 |
+|      Sse |  65536 |  6,155.14 ns |  0.16 |
+
+**NOTE**: SSE codec is available only for .NET 5 and above.
 
 ## Base85
 
@@ -194,7 +298,82 @@ On top of this I added some simple implementation of [`ShortGuid`](https://www.m
 
 # Usage
 
-TBD
+Creating a codec is relatively slow operation, so please do not create
+single use codec, but rather store them as static fields or singletons.
+
+Even better, use one of predefined codecs:
+
+```csharp
+class Base16
+{
+    // lower case base16 codec
+    static Base16Codec Lower { get; }
+    
+    // upper case base16 codec
+    static Base16Codec Upper { get; }
+    
+    // same as upper case
+    static Base16Codec Default { get; }
+}
+
+class Base64
+{
+    // general purpose base64 codec
+	static Base64Codec Default { get; }
+	
+	// url safe base64 codec, no padding, only url friendly characters
+	static Base64Codec Url { get; }
+	
+	// base64 codec optimized for bigger content
+	static Base64Codec Serializer { get; }
+}
+
+class Base85
+{
+    // general purpose base85 codec
+    static Base85Codec Default { get; }
+}
+```
+
+All codec derive from common abstraction: `BaseXCodec` class, so all 
+those methods below are available for all of them:
+
+```csharp
+class BaseXCode
+{
+    // verify input
+    int ErrorIndex(ReadOnlySpan<char> source);
+    
+    // decoded length, needed to allocate memory 
+    // might not be accurate by will never be not enough
+    int MaximumDecodedLength(int sourceLength);
+    int DecodedLength(ReadOnlySpan<char> source);
+
+    // encoded length, needed to allocate memory
+    // might not be accurate by will never be not enough
+    int MaximumEncodedLength(int sourceLength);
+    int EncodedLength(ReadOnlySpan<byte> source);
+
+    // encodes data into span of char or string    
+    int Encode(ReadOnlySpan<byte> source, Span<char> target);
+    string Encode(ReadOnlySpan<byte> source);
+    string Encode(byte[] source);
+    string Encode(byte[] source, int offset, int length);
+
+    // decodes data from span of char or string
+    int Decode(ReadOnlySpan<char> source, Span<byte> target);
+    byte[] Decode(ReadOnlySpan<char> source);
+    byte[] Decode(string source);
+}
+```
+
+So, to th most trivial example would be:
+
+```csharp
+var original = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+var serialized = Base64.Default.Encode(original);
+var deserialized = Base64.Default.Decode(serialized);
+```
 
 # Build
 
