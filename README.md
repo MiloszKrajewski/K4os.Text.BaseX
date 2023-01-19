@@ -2,18 +2,56 @@
 
 [![NuGet Stats](https://img.shields.io/nuget/v/K4os.Text.BaseX.svg)](https://www.nuget.org/packages/K4os.Text.BaseX)
 
-`K4os.Text.BaseX` is an implementation of Base16, Base64 and Base85 codecs for .NET/.NET core.
-I've implemented them for few reasons...
+`K4os.Text.BaseX` is an implementation of **Base16**, **Base64** and **Base85** codecs for .NET/.NET core.
+It also provides fast implementation of **ShortGuid** (URL friendly GUID).
+
+There are many caveats to this table below, and detailed results are more accurate, 
+but s a teaser I can show some benchmarks:
+
+|      Method | Algorithm | Operation | Length |      Mean | Ratio |
+|------------:|----------:|----------:|-------:|----------:|------:|
+| Framework * |    Base16 |    Encode |  65536 | 89.707 us |  1.00 |
+|     Default |    Base16 |    Encode |  65536 | 33.508 us |  0.38 |
+|        Simd |    Base16 |    Encode |  65536 |  6.191 us |  0.07 |
+|             |           |           |        |           |       |
+| Framework * |    Base16 |    Decode |  65536 | 94.222 us |  1.00 |
+|     Default |    Base16 |    Decode |  65536 | 45.265 us |  0.48 |
+|        Simd |    Base16 |    Decode |  65536 |  7.058 us |  0.07 |
+|             |           |           |        |           |       |
+|   Framework |    Base64 |    Encode |  65536 | 59.664 us |  1.00 |
+|     Default |    Base64 |    Encode |  65536 | 34.547 us |  0.58 |
+|      Lookup |    Base64 |    Encode |  65536 | 27.226 us |  0.46 |
+|        Simd |    Base64 |    Encode |  65536 |  7.934 us |  0.13 |
+|             |           |           |        |           |       |
+|   Framework |    Base64 |    Decode |  65536 | 56.027 us |  1.00 |
+|     Default |    Base64 |    Decode |  65536 | 40.418 us |  0.72 |
+|      Lookup |    Base64 |    Decode |  65536 | 33.589 us |  0.60 |
+|        Simd |    Base64 |    Decode |  65536 |  6.196 us |  0.11 |
+
+> **NOTE**: These results are little biased, as .NET implementation does not 
+> have allocation free encoding, so results are tainted by GC, but it is a
+> valid point though: why it does not have allocation free encoding?
+> The other bias is the fact that these measurements are done on a quite
+> large buffer so it favors SIMD implementation.
+
+Anyway, **Base16** is around **14x** faster than .NET implementation, 
+while **Base64** is roughly **9x** faster.
+
+I've started implementing them for few reasons...
 
 ## Base16
 
-I couldn't find any good implementation of Base16/Hex conversion in .NET, while this is something I actually use quite a lot
-and I've always implemented it in projects (`internal` helper methods). 
+I couldn't find any good implementation of Base16/Hex conversion in .NET, 
+while this is something I actually use quite a lot and I've always implemented 
+it in projects (`internal` helper methods). 
 
-Honestly, if you search StackOverflow for 'byte[] to hex string' and [top answer](https://stackoverflow.com/questions/623104/byte-to-hex-string) is:
-```
+Honestly, if you search StackOverflow for 'byte[] to hex string' and 
+[top answer](https://stackoverflow.com/questions/623104/byte-to-hex-string) is:
+
+```csharp
 var hex = BitConverter.ToString(data).Replace("-", string.Empty);
 ```
+
 then something is really really wrong.
 
 Above approach is 100s times slower than `BaseX` implementation.

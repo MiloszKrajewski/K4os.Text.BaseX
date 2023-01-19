@@ -8,8 +8,10 @@ namespace Benchmarks.Base64;
 [MemoryDiagnoser]
 public class Decoder64Vs
 {
-	private static Base64Encoder _exyll;
-	private static Base64Codec _mine;
+	private static readonly Base64Encoder ExyllCodec = Base64Encoder.Default;
+	private static readonly BaseXCodec DefaultCodec = new Base64Codec();
+	private static readonly BaseXCodec LookupCodec = new LookupBase64Codec();
+	private static readonly BaseXCodec SimdCodec = new SimdBase64Codec();
 	private byte[] _source;
 	private string _encoded;
 	private byte[] _decoded;
@@ -20,8 +22,6 @@ public class Decoder64Vs
 	[GlobalSetup]
 	public void Setup()
 	{
-		_mine = new Base64Codec();
-		_exyll = Base64Encoder.Default;
 		_source = new byte[Length];
 		new Random().NextBytes(_source);
 		_encoded = Convert.ToBase64String(_source);
@@ -29,10 +29,10 @@ public class Decoder64Vs
 	}
 
 	[Benchmark]
-	public void Base64_Span() { _mine.Decode(_encoded, _decoded); }
+	public void Base64_Span() { DefaultCodec.Decode(_encoded, _decoded); }
 		
 	[Benchmark]
-	public void Base64_String() { _ = _mine.Decode(_encoded); }
+	public void Base64_String() { _ = DefaultCodec.Decode(_encoded); }
 
 	[Benchmark(Baseline = true)]
 	public void Framework() { _ = Convert.FromBase64String(_encoded); }
