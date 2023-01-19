@@ -1,3 +1,6 @@
+## 0.0.7 (2023/01/19)
+* IMPROVED: Base64 can use SIMD (SSE3) instructions to speed up encoding/decoding
+
 ## 0.0.6 (2023/01/06)
 * IMPROVED: ShortGuid interface (added .Parse, .TryParse, .CanParse, .Create)
 * IMPROVED: ShortGuid parsing (less allocations)

@@ -5,10 +5,11 @@ using K4os.Text.BaseX.Codecs;
 
 namespace Benchmarks.Base64;
 
-public class Encoder64
+public class Encoder64WithSpans
 {
 	private static BaseXCodec _baseline;
-	private static BaseXCodec _challenger;
+	private static BaseXCodec _lookup;
+	private static BaseXCodec _simd;
 	private byte[] _source;
 	private char[] _target;
 
@@ -19,7 +20,8 @@ public class Encoder64
 	public void Setup()
 	{
 		_baseline = new Base64Codec();
-		_challenger = new SimdBase64Codec();
+		_lookup = new LookupBase64Codec();
+		_simd = new SimdBase64Codec();
 		_source = new byte[Length];
 		new Random().NextBytes(_source);
 		_target = new char[_baseline.EncodedLength(_source)];
@@ -29,5 +31,8 @@ public class Encoder64
 	public void Baseline() { _baseline.Encode(_source, _target); }
 
 	[Benchmark]
-	public void Challenger() { _challenger.Encode(_source, _target); }
+	public void Lookup() { _lookup.Encode(_source, _target); }
+	
+	[Benchmark]
+	public void Sse() { _simd.Encode(_source, _target); }
 }

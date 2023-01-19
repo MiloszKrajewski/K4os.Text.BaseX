@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using K4os.Text.BaseX.Codecs;
 using ReferenceCodec.Logos;
 using Xunit;
 

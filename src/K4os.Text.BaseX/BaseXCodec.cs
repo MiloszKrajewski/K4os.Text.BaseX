@@ -5,7 +5,7 @@ using K4os.Text.BaseX.Internal;
 namespace K4os.Text.BaseX;
 
 /// <summary>Base class for all codecs.</summary>
-public abstract class BaseXCodec
+public abstract class BaseXCodec: IBaseXCodec
 {
 	/// <summary>Maximum digits. Effectively all ASCII8 characters.</summary>
 	protected const int MAX_DIGIT = 255;
@@ -250,7 +250,7 @@ public abstract class BaseXCodec
 	{
 		source = StripPadding(source);
 		var targetLength = DecodedLength(source);
-		if (targetLength == 0) return Array.Empty<byte>();
+		if (targetLength <= 0) return Array.Empty<byte>();
 
 		var target = new byte[targetLength];
 		var used = DecodeImpl(source, target.AsSpan());
@@ -317,9 +317,9 @@ public abstract class BaseXCodec
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	protected static unsafe char Encode1(char* map, int v) => *(map + (uint)v);
 
-	private static ArgumentException InvalidChar(char c) =>
-		new ArgumentException($"Invalid character '{c}'");
+	private static ArgumentException InvalidChar(char c) => 
+		new($"Invalid character '{c}'");
 
-	private static ArgumentException DuplicateChar(char c) =>
-		new ArgumentException($"Character '{c}' is duplicated");
+	private static ArgumentException DuplicateChar(char c) => 
+		new($"Character '{c}' is duplicated");
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using K4os.Text.BaseX;
+using K4os.Text.BaseX.Codecs;
 
 namespace Benchmarks.Base16;
 

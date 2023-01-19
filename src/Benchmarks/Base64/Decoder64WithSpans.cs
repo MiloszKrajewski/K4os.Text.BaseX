@@ -2,14 +2,14 @@ using System;
 using BenchmarkDotNet.Attributes;
 using K4os.Text.BaseX;
 using K4os.Text.BaseX.Codecs;
-using BaselineCodec = K4os.Text.BaseX.Codecs.Base64Codec;
 
 namespace Benchmarks.Base64;
 
-public class Decoder64
+public class Decoder64WithSpans
 {
 	private static BaseXCodec _baseline;
-	private static BaseXCodec _challenger;
+	private static BaseXCodec _lookup;
+	private static BaseXCodec _simd;
 	private byte[] _source;
 	private string _encoded;
 	private byte[] _decoded;
@@ -20,8 +20,9 @@ public class Decoder64
 	[GlobalSetup]
 	public void Setup()
 	{
-		_baseline = new BaselineCodec();
-		_challenger = new SimdBase64Codec();
+		_baseline = new Base64Codec();
+		_lookup = new LookupBase64Codec();
+		_simd = new SimdBase64Codec();
 		_source = new byte[Length];
 		new Random().NextBytes(_source);
 		_encoded = Convert.ToBase64String(_source);
@@ -30,7 +31,10 @@ public class Decoder64
 
 	[Benchmark(Baseline = true)]
 	public void Baseline() { _baseline.Decode(_encoded, _decoded); }
+	
+	[Benchmark]
+	public void Lookup() { _lookup.Decode(_encoded, _decoded); }
 
 	[Benchmark]
-	public void Challenger() { _challenger.Decode(_encoded, _decoded); }
+	public void Sse() { _simd.Decode(_encoded, _decoded); }
 }
