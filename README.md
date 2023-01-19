@@ -41,6 +41,11 @@ I've started implementing them for few reasons...
 
 ## Base16
 
+> I wrote Base16 SIMD code as an exercise, but it turned out to be actually working.
+> There is still some room for optimisation, especially on decoding from ASCII.
+> Special thanks for professor [Daniel Lemire](https://twitter.com/lemire) for
+> advice guidance.
+
 I couldn't find any good implementation of Base16/Hex conversion in .NET, 
 while this is something I actually use quite a lot and I've always implemented 
 it in projects (`internal` helper methods). 
@@ -136,6 +141,13 @@ This is because `HexConverter` does not have SIMD decoder implementation (yet, I
 **NOTE**: decoder is **very** tolerant to invalid input - it will not crash, but it will also not report any errors. Garbage in, garbage out, but no warning.  
 
 ## Base64
+
+> All credit for Base64 SIMD code goes to [Wojciech Muła](https://twitter.com/pshufb) and fantastic
+> series of articles about [encoding](http://0x80.pl/notesen/2016-01-12-sse-base64-encoding.html)
+> and [decoding](http://0x80.pl/notesen/2016-01-17-sse-base64-decoding.html) Base64 using SSE/AVX.
+> I'm already proud that I almost understand how it works, but coming up with some of optimization
+> ideas Wojciech has shown it far above my pay grade. 
+> Send all you your money to him, and beautiful things will keep coming.
 
 With Base64 the story is a little bit different. .NET has very decent Base64 codec and I wouldn't need to do anything, but...
 we needed url friendly version of Base64 which replaces `+` and `/` with `-` and `_` (respectively) as both of them have 
