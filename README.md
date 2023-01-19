@@ -175,6 +175,63 @@ to already existing string, as per definition strings are immutable.
 For bigger strings `Base64` is faster (roughly 20% less time) as allocation speed means less, 
 and as usual allocation free mode is much faster (as there is no allocation at all).
 
+### Further improvements
+
+Please note, all above measurements were done Framework (HexConverter) vs
+my Baseline (Base64Codec). And as shown my baseline codec is faster except
+for very small strings where string allocation is the bottleneck. In all
+cases `Span<byte>` version is much faster than the one producing `string`, so
+try to use it.
+
+String allocation aside, can we do better in transformation itself? Yes we can.
+
+As **baseline** is out bread-and-butter `Base64Codec` I have created two additional
+ones so far.
+
+`LookupBase64Code` is build on top large lookup tables. It is slightly faster than
+baseline (around 20% less time, meaning 1.25x faster) but comes at the price of 
+additional memory usage (it has ~1MB of lookup tables). 
+
+`SimdBase64Code` is using SIMD instructions (SSE3 only at the moment) at is much much 
+faster (around 75% less time, meaning 4x faster). It comes at the price of additional
+fixed cost use to determine how much can be processed by SIMD and how much needs to 
+be processed by "usual" means, therefore there will be no performance gain for very
+small strings.
+
+### Baseline vs Lookup vs SSE encoders
+
+|   Method | Length |         Mean | Ratio |
+|---------:|-------:|-------------:|------:|
+| Baseline |     16 |     23.01 ns |  1.00 |
+|   Lookup |     16 |     19.69 ns |  0.86 |
+|      Sse |     16 |     22.96 ns |  1.00 |
+|          |        |              |       |
+| Baseline |   1337 |    730.29 ns |  1.00 |
+|   Lookup |   1337 |    578.59 ns |  0.79 |
+|      Sse |   1337 |    180.76 ns |  0.25 |
+|          |        |              |       |
+| Baseline |  65536 | 34,677.54 ns |  1.00 |
+|   Lookup |  65536 | 26,809.25 ns |  0.77 |
+|      Sse |  65536 |  7,953.07 ns |  0.23 |
+
+### Baseline vs Lookup vs SSE decoders
+
+|   Method | Length |         Mean | Ratio |
+|---------:|-------:|-------------:|------:|
+| Baseline |     16 |     28.01 ns |  1.00 |
+|   Lookup |     16 |     29.70 ns |  1.06 |
+|      Sse |     16 |     28.72 ns |  1.03 |
+|          |        |              |       |
+| Baseline |   1337 |    833.49 ns |  1.00 |
+|   Lookup |   1337 |    695.32 ns |  0.83 |
+|      Sse |   1337 |    160.73 ns |  0.19 |
+|          |        |              |       |
+| Baseline |  65536 | 39,707.10 ns |  1.00 |
+|   Lookup |  65536 | 33,159.08 ns |  0.84 |
+|      Sse |  65536 |  6,155.14 ns |  0.16 |
+
+**NOTE**: SSE codec is available only for .NET 5 and above.
+
 ## Base85
 
 I've implemented this one for completeness. I'm not using Base85 often, but it quite interesting concept.

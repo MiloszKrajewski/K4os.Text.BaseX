@@ -6,7 +6,7 @@ using K4os.Text.BaseX;
 namespace Benchmarks.Base64;
 
 [MemoryDiagnoser]
-public class Encoder64Vs
+public class Encoder64ToString
 {
 	private static Base64Encoder _exyll;
 	private static Base64Codec _mine;
