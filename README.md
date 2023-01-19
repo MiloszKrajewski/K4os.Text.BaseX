@@ -28,7 +28,7 @@ but s a teaser I can show some benchmarks:
 |      Lookup |    Base64 |    Decode |  65536 | 33.589 us |  0.60 |
 |        Simd |    Base64 |    Decode |  65536 |  6.196 us |  0.11 |
 
-> **NOTE**: These results are little biased, as .NET implementation does not 
+> **NOTE**: These results are little biased, as .NET Base16 implementation does not 
 > have allocation free encoding, so results are tainted by GC, but it is a
 > valid point though: why it does not have allocation free encoding?
 > The other bias is the fact that these measurements are done on a quite
