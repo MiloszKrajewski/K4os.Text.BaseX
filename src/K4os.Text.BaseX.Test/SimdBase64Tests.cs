@@ -70,7 +70,7 @@ public class SimdBase64Tests
 
 		var actual = new string(target, 0, 16);
 
-		Assert.Equal(expected, actual);
+		Tools.SpansAreEqual(expected, actual);
 	}
 
 	[Fact]
@@ -93,7 +93,7 @@ public class SimdBase64Tests
 
 			var actual = new string(target, 0, 16);
 
-			Assert.Equal(expected, actual);
+			Tools.SpansAreEqual(expected, actual);
 		}
 	}
 
@@ -113,7 +113,7 @@ public class SimdBase64Tests
 		var expected = Convert.ToBase64String(source);
 		var actual = simd.Encode(source);
 		
-		Assert.Equal(expected, actual);
+		Tools.SpansAreEqual(expected, actual);
 	}
 	
 	[Fact]
@@ -132,7 +132,7 @@ public class SimdBase64Tests
 			var expected = Convert.ToBase64String(source);
 			var actual = simd.Encode(source);
 		
-			Assert.Equal(expected, actual);
+			Tools.SpansAreEqual(expected, actual);
 		}
 	}
 	
@@ -152,7 +152,7 @@ public class SimdBase64Tests
 
 		var decoded = simd.Decode(encoded);
 		
-		Assert.Equal(source, decoded);
+		Tools.SpansAreEqual(source, decoded);
 	}
 	
 	[Fact]
@@ -171,7 +171,7 @@ public class SimdBase64Tests
 
 			var decoded = simd.Decode(encoded);
 
-			Assert.Equal(source, decoded);
+			Tools.SpansAreEqual(source, decoded);
 		}
 	}
 }

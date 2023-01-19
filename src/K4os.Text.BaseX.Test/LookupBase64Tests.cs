@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using Xunit;
 
 namespace K4os.Text.BaseX.Test;
@@ -27,7 +26,7 @@ public class LookupBase64Tests
 			baseline.Encode(source, expected);
 			tested.Encode(source, actual);
 			
-			ExpectTheSame(expected, actual);
+			Tools.SpansAreEqual(expected, actual);
 		}
 	}
 	
@@ -57,7 +56,7 @@ public class LookupBase64Tests
 			baseline.Decode(source, expected);
 			tested.Decode(source, actual);
 			
-			ExpectTheSame(expected, actual);
+			Tools.SpansAreEqual(expected, actual);
 		}
 	}
 
@@ -83,46 +82,12 @@ public class LookupBase64Tests
 			random.NextBytes(original);
 			baseline.Encode(original, expected);
 			tested.Encode(original, actual);
-			ExpectTheSame(expected, actual);
+			Tools.SpansAreEqual(expected, actual);
 
 			tested.Decode(actual, decoded);
-			ExpectTheSame(original, decoded);
+			Tools.SpansAreEqual(original, decoded);
 		}
 	}
 
 	#endif
-
-	private static void ExpectTheSame(Span<byte> expected, Span<byte> actual, int length = -1)
-	{
-		if (length < 0)
-		{
-			Assert.Equal(expected.Length, actual.Length);
-			length = expected.Length;
-		}
-
-		Assert.True(expected.Length <= length);
-		Assert.True(actual.Length <= length);
-
-		for (var i = 0; i < length; i++)
-			if (expected[i] != actual[i])
-				throw new InvalidDataException(
-					$"Expected {expected[i]} at {i}, but got {actual[i]}");
-	}
-
-	private static void ExpectTheSame(Span<char> expected, Span<char> actual, int length = -1)
-	{
-		if (length < 0)
-		{
-			Assert.Equal(expected.Length, actual.Length);
-			length = expected.Length;
-		}
-
-		Assert.True(expected.Length <= length);
-		Assert.True(actual.Length <= length);
-
-		for (var i = 0; i < length; i++)
-			if (expected[i] != actual[i])
-				throw new InvalidDataException(
-					$"Expected {expected[i]} at {i}, but got {actual[i]}");
-	}
 }
