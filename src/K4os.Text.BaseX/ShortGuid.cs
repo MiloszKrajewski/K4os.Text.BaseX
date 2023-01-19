@@ -1,4 +1,5 @@
 using System;
+using K4os.Text.BaseX.Codecs;
 using K4os.Text.BaseX.Internal;
 
 namespace K4os.Text.BaseX;

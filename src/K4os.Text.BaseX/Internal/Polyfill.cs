@@ -42,6 +42,7 @@ internal static class Polyfill
 			: pooled = ArrayPool<char>.Shared.Rent(length);
 		
 		action(target, arguments);
+		
 		string result;
 		fixed (char* targetP = target)
 			result = new string(targetP, 0, length);
@@ -66,6 +67,7 @@ internal static class Polyfill
 			: pooled = ArrayPool<char>.Shared.Rent(length);
 		
 		var used = action(target, arguments);
+		
 		string result;
 		fixed (char* targetP = target)
 			result = used > 0 ? new string(targetP, 0, used) : string.Empty;
