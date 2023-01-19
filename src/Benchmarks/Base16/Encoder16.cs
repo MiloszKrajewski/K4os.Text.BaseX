@@ -1,7 +1,7 @@
 using System;
 using BenchmarkDotNet.Attributes;
-using BaselineCodec = K4os.Text.BaseX.Base16Codec;
-using ChallengerCodec = K4os.Text.BaseX.Base16Codec;
+using BaselineCodec = K4os.Text.BaseX.Codecs.Base16Codec;
+using ChallengerCodec = K4os.Text.BaseX.Codecs.Base16Codec;
 
 namespace Benchmarks.Base16;
 

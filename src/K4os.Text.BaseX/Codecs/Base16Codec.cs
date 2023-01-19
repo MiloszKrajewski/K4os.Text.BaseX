@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace K4os.Text.BaseX;
+namespace K4os.Text.BaseX.Codecs;
 
 /// <summary>Base16 codec.</summary>
 public class Base16Codec: BaseXCodec
@@ -39,13 +39,13 @@ public class Base16Codec: BaseXCodec
 		byte* target, int targetLength)
 	{
 		var targetStart = target;
-		var sourceEnd = source + sourceLength;
+		var sourceLimit = source + sourceLength;
 
 		fixed (byte* map = Utf8ToByte)
 		{
 			source += 8;
 				
-			while (source <= sourceEnd)
+			while (source <= sourceLimit)
 			{
 				*(target + 0) = Decode2(map, *(uint*) (source - 8));
 				*(target + 1) = Decode2(map, *(uint*) (source - 6));
@@ -57,7 +57,7 @@ public class Base16Codec: BaseXCodec
 
 			source -= 8;
 				
-			while (source < sourceEnd)
+			while (source < sourceLimit)
 			{
 				*target = Decode2(map, *(uint*) source);
 				source += 2;
@@ -73,13 +73,13 @@ public class Base16Codec: BaseXCodec
 		byte* source, int sourceLength, char* target, int targetLength)
 	{
 		var targetStart = target;
-		var sourceEnd = source + sourceLength;
+		var sourceLimit = source + sourceLength;
 
 		fixed (char* map = ByteToChar)
 		{
 			source += 4;
 				
-			while (source <= sourceEnd)
+			while (source <= sourceLimit)
 			{
 				*(uint*) (target + 0) = Encode2(map, *(source - 4));
 				*(uint*) (target + 2) = Encode2(map, *(source - 3));
@@ -91,7 +91,7 @@ public class Base16Codec: BaseXCodec
 
 			source -= 4;
 
-			while (source < sourceEnd)
+			while (source < sourceLimit)
 			{
 				*(uint*) target = Encode2(map, *source);
 				source++;

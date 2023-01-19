@@ -5,7 +5,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 using K4os.Text.BaseX.Internal;
 
-namespace K4os.Text.BaseX;
+#endif
+
+namespace K4os.Text.BaseX.Codecs;
+
+#if NET5_0_OR_GREATER
 
 /// <summary>
 /// SSE2/AVX2 implementation of Base16 encoder.

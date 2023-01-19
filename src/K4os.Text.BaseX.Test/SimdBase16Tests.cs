@@ -1,4 +1,5 @@
 using System;
+using K4os.Text.BaseX.Codecs;
 using K4os.Text.BaseX.Internal;
 using Xunit;
 
@@ -15,22 +16,6 @@ public enum SimdLevel
 public class SimdBase16Tests
 {
 	private const int Unaligned64K = 0x10000 + 32 + 16 + 4 + 3;
-
-	private static void SpansAreEqual(ReadOnlySpan<char> expected, ReadOnlySpan<char> actual)
-	{
-		Assert.Equal(expected.Length, actual.Length);
-		for (var i = 0; i < expected.Length; i++)
-			if (expected[i] != actual[i])
-				throw new Exception($"Expected '{expected[i]}' at {i}, got '{actual[i]}'");
-	}
-
-	private static void SpansAreEqual(ReadOnlySpan<byte> expected, ReadOnlySpan<byte> actual)
-	{
-		Assert.Equal(expected.Length, actual.Length);
-		for (var i = 0; i < expected.Length; i++)
-			if (expected[i] != actual[i])
-				throw new Exception($"Expected '{expected[i]}' at {i}, got '{actual[i]}'");
-	}
 
 	~SimdBase16Tests() { UpdateSimdLevel(SimdLevel.All); }
 
@@ -69,7 +54,7 @@ public class SimdBase16Tests
 		Convert.ToHexString(source).AsSpan().CopyTo(expected);
 		codec.Encode(source, actual);
 
-		SpansAreEqual(expected, actual);
+		Tools.SpansAreEqual(expected, actual);
 	}
 	
 	[Theory]
@@ -100,7 +85,7 @@ public class SimdBase16Tests
 		Convert.ToHexString(sourceP).AsSpan().CopyTo(expectedP);
 		codec.Encode(sourceP, actualP);
 
-		SpansAreEqual(expectedP, actualP);
+		Tools.SpansAreEqual(expectedP, actualP);
 	}
 
 	[Theory]
@@ -123,7 +108,7 @@ public class SimdBase16Tests
 		Convert.ToHexString(source).ToLowerInvariant().AsSpan().CopyTo(expected);
 		codec.Encode(source, actual);
 
-		SpansAreEqual(expected, actual);
+		Tools.SpansAreEqual(expected, actual);
 	}
 
 	[Theory]
@@ -153,7 +138,7 @@ public class SimdBase16Tests
 
 		codec.Decode(target, actual);
 
-		SpansAreEqual(source, actual);
+		Tools.SpansAreEqual(source, actual);
 	}
 
 	[Theory]
@@ -178,6 +163,6 @@ public class SimdBase16Tests
 
 		codec.Decode(target, actual);
 
-		SpansAreEqual(source, actual);
+		Tools.SpansAreEqual(source, actual);
 	}
 }
