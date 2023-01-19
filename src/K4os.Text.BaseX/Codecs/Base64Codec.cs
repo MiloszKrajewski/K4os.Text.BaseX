@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace K4os.Text.BaseX;
+namespace K4os.Text.BaseX.Codecs;
 
 /// <summary>Base64 codec.</summary>
 public class Base64Codec: BaseXCodec

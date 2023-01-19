@@ -1,14 +1,14 @@
 using System;
 using BenchmarkDotNet.Attributes;
+using K4os.Text.BaseX.Codecs;
 using ReferenceCodec = Benchmarks.Reference.ReferenceBase85Codec;
-using ChallengerCodec = K4os.Text.BaseX.Base85Codec;
 
 namespace Benchmarks.Base85;
 
 public class Codec85
 {
 	private ReferenceCodec _referenceCodec;
-	private ChallengerCodec _challengerCoded;
+	private Base85Codec _challengerCoded;
 	private byte[] _original;
 	private char[] _encoded;
 	private byte[] _decoded;
@@ -20,7 +20,7 @@ public class Codec85
 	public void Setup()
 	{
 		_referenceCodec = new ReferenceCodec();
-		_challengerCoded = new ChallengerCodec();
+		_challengerCoded = new Base85Codec();
 		_original = new byte[Length];
 		_encoded = new char[_referenceCodec.MaximumDecodedLength(_original.Length)];
 		_decoded = new byte[_referenceCodec.DecodedLength(_encoded)];

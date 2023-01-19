@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace K4os.Text.BaseX;
+namespace K4os.Text.BaseX.Codecs;
 
 /// <summary>
 /// Specialized version of Base64 codec built on top of lookup tables,

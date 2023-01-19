@@ -7,7 +7,7 @@ using K4os.Text.BaseX.Internal;
 
 #endif
 
-namespace K4os.Text.BaseX;
+namespace K4os.Text.BaseX.Codecs;
 
 #if NET5_0_OR_GREATER
 

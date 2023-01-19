@@ -1,7 +1,7 @@
 using System;
 using BenchmarkDotNet.Attributes;
 using K4os.Text.BaseX;
-using BaselineCodec = K4os.Text.BaseX.Base64Codec;
+using K4os.Text.BaseX.Codecs;
 
 namespace Benchmarks.Base64;
 
@@ -19,7 +19,7 @@ public class Encoder64WithSpans
 	[GlobalSetup]
 	public void Setup()
 	{
-		_baseline = new BaselineCodec();
+		_baseline = new Base64Codec();
 		_lookup = new LookupBase64Codec();
 		_simd = new SimdBase64Codec();
 		_source = new byte[Length];

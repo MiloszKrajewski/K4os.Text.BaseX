@@ -1,4 +1,5 @@
 using System;
+using K4os.Text.BaseX.Codecs;
 using Xunit;
 
 namespace K4os.Text.BaseX.Test;

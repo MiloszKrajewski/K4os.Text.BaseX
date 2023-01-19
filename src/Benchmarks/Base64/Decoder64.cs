@@ -1,7 +1,8 @@
 using System;
 using BenchmarkDotNet.Attributes;
 using K4os.Text.BaseX;
-using BaselineCodec = K4os.Text.BaseX.Base64Codec;
+using K4os.Text.BaseX.Codecs;
+using BaselineCodec = K4os.Text.BaseX.Codecs.Base64Codec;
 
 namespace Benchmarks.Base64;
 

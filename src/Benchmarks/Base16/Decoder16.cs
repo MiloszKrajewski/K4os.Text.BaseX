@@ -1,15 +1,14 @@
 using System;
 using BenchmarkDotNet.Attributes;
+using K4os.Text.BaseX;
+using K4os.Text.BaseX.Codecs;
 
 namespace Benchmarks.Base16
 {
-	using BaselineCodec = K4os.Text.BaseX.Base16Codec;
-	using ChallengerCodec = K4os.Text.BaseX.Base16Codec;
-
 	public class Decoder16
 	{
-		private static BaselineCodec _baseline;
-		private static ChallengerCodec _challenger;
+		private static BaseXCodec _baseline;
+		private static BaseXCodec _challenger;
 		private byte[] _source;
 		private string _encoded;
 		private byte[] _decoded;
@@ -20,8 +19,8 @@ namespace Benchmarks.Base16
 		[GlobalSetup]
 		public void Setup()
 		{
-			_baseline = new BaselineCodec();
-			_challenger = new ChallengerCodec();
+			_baseline = new Base16Codec();
+			_challenger = new SimdBase16Codec();
 			_source = new byte[Length];
 			new Random().NextBytes(_source);
 			_encoded = Convert.ToBase64String(_source);

@@ -298,7 +298,82 @@ On top of this I added some simple implementation of [`ShortGuid`](https://www.m
 
 # Usage
 
-TBD
+Creating a codec is relatively slow operation, so please do not create
+single use codec, but rather store them as static fields or singletons.
+
+Even better, use one of predefined codecs:
+
+```csharp
+class Base16
+{
+    // lower case base16 codec
+    static Base16Codec Lower { get; }
+    
+    // upper case base16 codec
+    static Base16Codec Upper { get; }
+    
+    // same as upper case
+    static Base16Codec Default { get; }
+}
+
+class Base64
+{
+    // general purpose base64 codec
+	static Base64Codec Default { get; }
+	
+	// url safe base64 codec, no padding, only url friendly characters
+	static Base64Codec Url { get; }
+	
+	// base64 codec optimized for bigger content
+	static Base64Codec Serializer { get; }
+}
+
+class Base85
+{
+    // general purpose base85 codec
+    static Base85Codec Default { get; }
+}
+```
+
+All codec derive from common abstraction: `BaseXCodec` class, so all 
+those methods below are available for all of them:
+
+```csharp
+class BaseXCode
+{
+    // verify input
+    int ErrorIndex(ReadOnlySpan<char> source);
+    
+    // decoded length, needed to allocate memory 
+    // might not be accurate by will never be not enough
+    int MaximumDecodedLength(int sourceLength);
+    int DecodedLength(ReadOnlySpan<char> source);
+
+    // encoded length, needed to allocate memory
+    // might not be accurate by will never be not enough
+    int MaximumEncodedLength(int sourceLength);
+    int EncodedLength(ReadOnlySpan<byte> source);
+
+    // encodes data into span of char or string    
+    int Encode(ReadOnlySpan<byte> source, Span<char> target);
+    string Encode(ReadOnlySpan<byte> source);
+    string Encode(byte[] source);
+    string Encode(byte[] source, int offset, int length);
+
+    // decodes data from span of char or string
+    int Decode(ReadOnlySpan<char> source, Span<byte> target);
+    byte[] Decode(ReadOnlySpan<char> source);
+    byte[] Decode(string source);
+}
+```
+
+So, to th most trivial example would be:
+
+```csharp
+var original = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+var serialized = Base64.Default.Encode(original);
+var deserialized = Base64.Default.Decode(serialized);
+```
 
 # Build
 
