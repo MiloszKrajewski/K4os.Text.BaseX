@@ -6,7 +6,7 @@
 It also provides fast implementation of **ShortGuid** (URL friendly GUID).
 
 There are many caveats to this table below, and detailed results are more accurate, 
-but s a teaser I can show some benchmarks:
+but as a teaser I can show some benchmarks:
 
 |      Method | Algorithm | Operation | Length |      Mean | Ratio |
 |------------:|----------:|----------:|-------:|----------:|------:|
@@ -29,10 +29,10 @@ but s a teaser I can show some benchmarks:
 |        Simd |    Base64 |    Decode |  65536 |  6.196 us |  0.11 |
 
 > **NOTE**: These results are little biased, as .NET Base16 implementation does not 
-> have allocation free encoding, so results are tainted by GC, but it is a
-> valid point though: why it does not have allocation free encoding?
-> The other bias is the fact that these measurements are done on a quite
-> large buffer so it favors SIMD implementation.
+> have allocation free encoding, so its results are tainted with time spent in 
+> allocation, but it is a valid point though: why it does not have allocation free encoding?
+> The other bias is the fact that these measurements are done on a quite large buffer so 
+> it favors SIMD implementation.
 
 Anyway, **Base16** is around **14x** faster than .NET implementation, 
 while **Base64** is roughly **9x** faster.
@@ -43,8 +43,8 @@ I've started implementing them for few reasons...
 
 > I wrote Base16 SIMD code as an exercise, but it turned out to be actually working.
 > There is still some room for optimisation, especially on decoding from ASCII.
-> Special thanks for professor [Daniel Lemire](https://twitter.com/lemire) for
-> advice guidance.
+> Special thanks for professor [Daniel Lemire](https://github.com/lemire) for
+> advice and guidance.
 
 I couldn't find any good implementation of Base16/Hex conversion in .NET, 
 while this is something I actually use quite a lot and I've always implemented 
