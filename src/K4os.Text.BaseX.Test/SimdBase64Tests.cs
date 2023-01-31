@@ -60,13 +60,13 @@ public class SimdBase64Tests
 	public unsafe void Transforming16Bytes()
 	{
 		var source = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-		var expected = Convert.ToBase64String(source).Substring(0, 16);
-
 		var target = new char[1024];
+		var expected = Convert.ToBase64String(source).Substring(0, 16);
+		
 		fixed (byte* s = source)
 		fixed (char* t = target)
 		{
-			SimdBase64.EncodeSse(s, t);
+			SimdBase64.Encode_SSSE3(s, 16, t, target.Length);
 		}
 
 		var actual = new string(target, 0, 16);
@@ -89,7 +89,7 @@ public class SimdBase64Tests
 			fixed (byte* s = source)
 			fixed (char* t = target)
 			{
-				SimdBase64.EncodeSse(s, t);
+				SimdBase64.Encode_SSSE3(s, 16, t, target.Length);
 			}
 
 			var actual = new string(target, 0, 16);

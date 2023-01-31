@@ -41,14 +41,14 @@ public class SimdBase64Codec: Base64Codec
 		if (Avx2.IsSupported && sourceLength >= 32 && SimdSettings.AllowAvx2)
 		{
 			written += UpdateAfterEncode(
-				SimdBase64.EncodeAvx2(source, sourceLength, target, targetLength),
+				SimdBase64.Encode_AVX2(source, sourceLength, target, targetLength),
 				ref source, ref sourceLength, ref target, ref targetLength);
 		}
 
 		if (Ssse3.IsSupported && sourceLength >= 16 && SimdSettings.AllowSsse3)
 		{
 			written += UpdateAfterEncode(
-				SimdBase64.EncodeSse(source, sourceLength, target, targetLength),
+				SimdBase64.Encode_SSSE3(source, sourceLength, target, targetLength),
 				ref source, ref sourceLength, ref target, ref targetLength);
 		}
 
@@ -89,14 +89,14 @@ public class SimdBase64Codec: Base64Codec
 		if (Avx2.IsSupported && sourceLength >= 32 && SimdSettings.AllowAvx2)
 		{
 			written += UpdateAfterDecode(
-				SimdBase64.DecodeAvx2(source, sourceLength, target, targetLength),
+				SimdBase64.Decode_AVX2(source, sourceLength, target, targetLength),
 				ref source, ref sourceLength, ref target, ref targetLength);
 		}
 
 		if (Ssse3.IsSupported && sourceLength >= 16 && SimdSettings.AllowSsse3)
 		{
 			written += UpdateAfterDecode(
-				SimdBase64.DecodeSse(source, sourceLength, target, targetLength),
+				SimdBase64.Decode_SSSE3(source, sourceLength, target, targetLength),
 				ref source, ref sourceLength, ref target, ref targetLength);
 		}
 

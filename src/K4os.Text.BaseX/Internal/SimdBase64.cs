@@ -21,8 +21,9 @@ namespace K4os.Text.BaseX.Internal;
 
 internal class SimdBase64: SimdTools
 {
+	// this is internal to allow testing, but it really shouldn't
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int AdjustBeforeEncode(
+	internal static int AdjustBeforeEncode(
 		bool support, int sourceLength, int targetLength, uint vectorSize) =>
 		AdjustBeforeTransform(
 			support, 
@@ -30,7 +31,7 @@ internal class SimdBase64: SimdTools
 			targetLength, vectorSize, 
 			vectorSize);
 	
-	public static unsafe int EncodeSse(
+	public static unsafe int Encode_SSSE3(
 		byte* source, int sourceLength,
 		char* target, int targetLength)
 	{
@@ -43,7 +44,7 @@ internal class SimdBase64: SimdTools
 
 		while (source < sourceLimit)
 		{
-			EncodeSse(source, target);
+			Encode_SSSE3(source, target);
 			source += 12;
 			target += 16;
 		}
@@ -52,13 +53,13 @@ internal class SimdBase64: SimdTools
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe void EncodeSse(byte* source, char* target)
+	private static unsafe void Encode_SSSE3(byte* source, char* target)
 	{
-		SaveAscii128(ToAscii(UnpackSse(LoadBytes128(source))), target);
+		SaveAscii128(ToAscii_SSSE3(Unpack_SSSE3(LoadBytes128(source))), target);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static Vector128<byte> UnpackSse(Vector128<byte> vector)
+	private static Vector128<byte> Unpack_SSSE3(Vector128<byte> vector)
 	{
 		var shuffled = Ssse3.Shuffle(
 			vector, 
@@ -88,7 +89,7 @@ internal class SimdBase64: SimdTools
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<sbyte> ToAscii(Vector128<byte> input)
+	private static Vector128<sbyte> ToAscii_SSSE3(Vector128<byte> input)
 	{
 		// __m128i lookup_pshufb_improved(const __m128i input)
 		// // reduce  0..51 -> 0
@@ -126,8 +127,9 @@ internal class SimdBase64: SimdTools
 		return Sse2.Add(result, input).AsSByte();
 	}
 	
+	// this is internal to allow testing, but it really shouldn't
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int AdjustBeforeDecode(
+	internal static int AdjustBeforeDecode(
 		bool support, int sourceLength, int targetLength, uint vectorSize) =>
 		AdjustBeforeTransform(
 			support, 
@@ -144,7 +146,7 @@ internal class SimdBase64: SimdTools
 	/// <param name="target">Target buffer address.</param>
 	/// <param name="targetLength">Target buffer address.</param>
 	/// <returns>Number of 3 bytes (or 4 characters) chunks encoded.</returns>
-	public static unsafe int DecodeSse(
+	public static unsafe int Decode_SSSE3(
 		char* source, int sourceLength,
 		byte* target, int targetLength)
 	{
@@ -157,7 +159,7 @@ internal class SimdBase64: SimdTools
 
 		while (source < sourceLimit)
 		{
-			DecodeSse(source, target);
+			Decode_SSSE3(source, target);
 			source += 16;
 			target += 12;
 		}
@@ -166,13 +168,13 @@ internal class SimdBase64: SimdTools
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe void DecodeSse(char* source, byte* target)
+	private static unsafe void Decode_SSSE3(char* source, byte* target)
 	{
-		SaveBytes128(DecodeSse(FromAscii(LoadAscii128(source))), target);
+		SaveBytes128(Decode_SSSE3(FromAscii_SSSE3(LoadAscii128(source))), target);
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<byte> FromAscii(Vector128<byte> vector)
+	private static Vector128<byte> FromAscii_SSSE3(Vector128<byte> vector)
 	{
 		// __m128i lookup_pshufb(const __m128i input)
 
@@ -270,7 +272,7 @@ internal class SimdBase64: SimdTools
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<byte> PackSse(Vector128<byte> vector)
+	private static Vector128<byte> Pack_SSSE3(Vector128<byte> vector)
 	{
 		// // input:  [00dddddd|00cccccc|00bbbbbb|00aaaaaa]
 		// // merge:  [0000cccc|ccdddddd|0000aaaa|aabbbbbb]
@@ -286,12 +288,12 @@ internal class SimdBase64: SimdTools
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<byte> DecodeSse(Vector128<byte> vector)
+	private static Vector128<byte> Decode_SSSE3(Vector128<byte> vector)
 	{
 		// // input:  packed_dword([00dddddd|00cccccc|00bbbbbb|00aaaaaa] x 4)
 		// // merged: packed_dword([00000000|ddddddcc|ccccbbbb|bbaaaaaa] x 4)
 		// const __m128i merged = pack(values);
-		var merged = PackSse(vector);
+		var merged = Pack_SSSE3(vector);
 
 		// // merged = packed_byte([0XXX|0YYY|0ZZZ|0WWW])
 		// const __m128i shuf = _mm_setr_epi8(
@@ -309,14 +311,16 @@ internal class SimdBase64: SimdTools
 		return Ssse3.Shuffle(merged.AsSByte(), shuffle).AsByte();
 	}
 
-	public static unsafe int EncodeAvx2(
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static unsafe int Encode_AVX2(
 		byte* source, int sourceLength,
 		char* target, int targetLength)
 	{
 		return 0;
 	}
 
-	public static unsafe int DecodeAvx2(
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static unsafe int Decode_AVX2(
 		char* source, int sourceLength,
 		byte* target, int targetLength)
 	{
