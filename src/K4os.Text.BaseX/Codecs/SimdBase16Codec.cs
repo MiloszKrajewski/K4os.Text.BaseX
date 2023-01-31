@@ -79,11 +79,12 @@ public class SimdBase16Codec: Base16Codec
 		return written;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private unsafe int EncodeSse2(byte* source, int sourceLength, char* target, int targetLength)
 	{
 		fixed (byte* nibbleToAscii = ByteToUtf8)
 		{
-			var read = SimdBase16.EncodeSse2(
+			var read = SimdBase16.Encode_SSE2(
 				source, sourceLength,
 				target, targetLength,
 				(sbyte*)nibbleToAscii);
@@ -91,11 +92,12 @@ public class SimdBase16Codec: Base16Codec
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private unsafe int EncodeSsse3(byte* source, int sourceLength, char* target, int targetLength)
 	{
 		fixed (byte* nibbleToAscii = ByteToUtf8)
 		{
-			var read = SimdBase16.EncodeSsse3(
+			var read = SimdBase16.Encode_SSSE3(
 				source, sourceLength,
 				target, targetLength,
 				(sbyte*)nibbleToAscii);
@@ -103,18 +105,19 @@ public class SimdBase16Codec: Base16Codec
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private unsafe int EncodeAvx2(byte* source, int sourceLength, char* target, int targetLength)
 	{
 		fixed (byte* nibbleToAscii = ByteToUtf8)
 		{
-			var read = SimdBase16.EncodeAvx2(
+			var read = SimdBase16.Encode_AVX2(
 				source, sourceLength,
 				target, targetLength,
 				(sbyte*)nibbleToAscii);
 			return read << 1;
 		}
 	}
-	
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static unsafe int UpdateAfterDecode(
 		int written,
@@ -145,6 +148,13 @@ public class SimdBase16Codec: Base16Codec
 				ref source, ref sourceLength, ref target, ref targetLength);
 		}
 
+		if (Ssse3.IsSupported && sourceLength >= 32 && SimdSettings.AllowSsse3)
+		{
+			written += UpdateAfterDecode(
+				DecodeSsse3(source, sourceLength, target, targetLength),
+				ref source, ref sourceLength, ref target, ref targetLength);
+		}
+
 		if (Sse2.IsSupported && sourceLength >= 32 && SimdSettings.AllowSse2)
 		{
 			written += UpdateAfterDecode(
@@ -161,23 +171,33 @@ public class SimdBase16Codec: Base16Codec
 		return written;
 	}
 
-	private unsafe int DecodeSse2(char* source, int sourceLength, byte* target, int targetLength)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static unsafe int DecodeSse2(
+		char* source, int sourceLength, byte* target, int targetLength)
 	{
-		fixed (byte* nibbleToAscii = ByteToUtf8)
-		{
-			var read = SimdBase16.DecodeSse2(
-				source, sourceLength,
-				target, targetLength,
-				(sbyte*)nibbleToAscii);
-			return read >> 1;
-		}
+		var read = SimdBase16.Decode_SSE2(
+			source, sourceLength,
+			target, targetLength);
+		return read >> 1;
 	}
 
-	private unsafe int DecodeAvx2(char* source, int sourceLength, byte* target, int targetLength)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static unsafe int DecodeSsse3(
+		char* source, int sourceLength, byte* target, int targetLength)
+	{
+		var read = SimdBase16.Decode_SSSE3(
+			source, sourceLength,
+			target, targetLength);
+		return read >> 1;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private unsafe int DecodeAvx2(
+		char* source, int sourceLength, byte* target, int targetLength)
 	{
 		fixed (byte* nibbleToAscii = ByteToUtf8)
 		{
-			var read = SimdBase16.DecodeAvx2(
+			var read = SimdBase16.Decode_AVX2(
 				source, sourceLength,
 				target, targetLength,
 				(sbyte*)nibbleToAscii);
