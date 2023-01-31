@@ -111,7 +111,7 @@ internal class SimdBase16: SimdTools
 		sbyte* nibbleToAscii)
 	{
 		sourceLength = AdjustBeforeEncode(
-			Sse2.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
+			Ssse3.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
 		var ascii = LoadBytes128((byte*)nibbleToAscii).AsSByte();
@@ -262,7 +262,7 @@ internal class SimdBase16: SimdTools
 		byte* target, int targetLength)
 	{
 		sourceLength = AdjustBeforeDecode(
-			Sse2.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
+			Ssse3.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
 		var asciiMask = Vector128.Create(ushort0x00FF);
