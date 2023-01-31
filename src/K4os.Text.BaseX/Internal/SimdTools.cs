@@ -66,19 +66,40 @@ internal class SimdTools: SimdSettings
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static unsafe void SaveAscii128(Vector128<byte> source, char* target)
+	protected static unsafe void SaveAscii128(
+		Vector128<sbyte> source, char* target)
 	{
-		Sse2.Store((byte*)(target + 0x00), Sse2.UnpackLow(source, Vector128<byte>.Zero));
-		Sse2.Store((byte*)(target + 0x08), Sse2.UnpackHigh(source, Vector128<byte>.Zero));
+		Sse2.Store((sbyte*)(target + 0x00), Sse2.UnpackLow(source, Vector128<sbyte>.Zero));
+		Sse2.Store((sbyte*)(target + 0x08), Sse2.UnpackHigh(source, Vector128<sbyte>.Zero));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	[Obsolete("Use it only when you measure performance")]
+	protected static unsafe void SaveAscii128(
+		Vector128<sbyte> source, char* target, Vector128<sbyte> zero)
+	{
+		Sse2.Store((sbyte*)(target + 0x00), Sse2.UnpackLow(source, zero));
+		Sse2.Store((sbyte*)(target + 0x08), Sse2.UnpackHigh(source, zero));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	protected static unsafe void SaveAscii256(Vector256<sbyte> source, char* target)
+	{
+		source = Avx2.Permute4x64(source.AsInt64(), PERM_0213).AsSByte();
+		Avx.Store((sbyte*)(target + 0x00), Avx2.UnpackLow(source, Vector256<sbyte>.Zero));
+		Avx.Store((sbyte*)(target + 0x10), Avx2.UnpackHigh(source, Vector256<sbyte>.Zero));
+	}
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	[Obsolete("Use it only when you measure performance")]
+	protected static unsafe void SaveAscii256(
+		Vector256<sbyte> source, char* target, Vector256<sbyte> zero)
+	{
+		source = Avx2.Permute4x64(source.AsInt64(), PERM_0213).AsSByte();
+		Avx.Store((sbyte*)(target + 0x00), Avx2.UnpackLow(source, zero));
+		Avx.Store((sbyte*)(target + 0x10), Avx2.UnpackHigh(source, zero));
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static unsafe void SaveAscii256(Vector256<byte> source, char* target)
-	{
-		source = Avx2.Permute4x64(source.AsInt64(), PERM_0213).AsByte();
-		Avx.Store((byte*)(target + 0x00), Avx2.UnpackLow(source, Vector256<byte>.Zero));
-		Avx.Store((byte*)(target + 0x10), Avx2.UnpackHigh(source, Vector256<byte>.Zero));
-	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	protected static unsafe Vector128<byte> LoadBytes128(byte* source) => 

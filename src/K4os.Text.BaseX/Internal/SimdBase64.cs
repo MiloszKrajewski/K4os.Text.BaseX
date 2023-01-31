@@ -88,7 +88,7 @@ internal class SimdBase64: SimdTools
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Vector128<byte> ToAscii(Vector128<byte> input)
+	public static Vector128<sbyte> ToAscii(Vector128<byte> input)
 	{
 		// __m128i lookup_pshufb_improved(const __m128i input)
 		// // reduce  0..51 -> 0
@@ -123,7 +123,7 @@ internal class SimdBase64: SimdTools
 		result = Ssse3.Shuffle(shiftLut, result.AsSByte()).AsByte();
 
 		// return _mm_add_epi8(result, input);
-		return Sse2.Add(result, input);
+		return Sse2.Add(result, input).AsSByte();
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

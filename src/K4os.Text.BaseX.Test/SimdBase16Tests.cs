@@ -1,7 +1,8 @@
 using System;
-using K4os.Text.BaseX.Codecs;
 using K4os.Text.BaseX.Internal;
 using Xunit;
+
+using CodecUnderTest = K4os.Text.BaseX.Codecs.SimdBase16Codec;
 
 namespace K4os.Text.BaseX.Test;
 
@@ -39,11 +40,14 @@ public class SimdBase16Tests
 	[InlineData(SimdLevel.Sse2, Unaligned64K)]
 	[InlineData(SimdLevel.Ssse3, Unaligned64K)]
 	[InlineData(SimdLevel.Avx2, Unaligned64K)]
-	public void EncoderCorrectness(SimdLevel level, int length)
+	[InlineData(SimdLevel.Sse2, Unaligned64K, true)]
+	[InlineData(SimdLevel.Ssse3, Unaligned64K, true)]
+	[InlineData(SimdLevel.Avx2, Unaligned64K, true)]
+	public void EncoderCorrectness(SimdLevel level, int length, bool lowerCase = false)
 	{
 		UpdateSimdLevel(level);
 
-		var codec = new SimdBase16Codec(false);
+		var codec = new CodecUnderTest(lowerCase);
 
 		var source = new byte[length];
 		var expected = new char[length * 2];
@@ -51,7 +55,10 @@ public class SimdBase16Tests
 
 		new Random(0).NextBytes(source);
 
-		Convert.ToHexString(source).AsSpan().CopyTo(expected);
+		var expectedString = Convert.ToHexString(source);
+		if (lowerCase) expectedString = expectedString.ToLowerInvariant();
+		expectedString.AsSpan().CopyTo(expected);
+		
 		codec.Encode(source, actual);
 
 		Tools.SpansAreEqual(expected, actual);
@@ -70,7 +77,7 @@ public class SimdBase16Tests
 		var length = Unaligned64K;
 		UpdateSimdLevel(level);
 
-		var codec = new SimdBase16Codec();
+		var codec = new CodecUnderTest();
 
 		var source = new byte[length + offset];
 		var expected = new char[length * 2 + offset];
@@ -97,7 +104,7 @@ public class SimdBase16Tests
 	{
 		UpdateSimdLevel(level);
 
-		var codec = new SimdBase16Codec(true);
+		var codec = new CodecUnderTest(true);
 
 		var source = new byte[length];
 		var expected = new char[length * 2];
@@ -120,12 +127,13 @@ public class SimdBase16Tests
 	[InlineData(SimdLevel.Avx2, 1024)]
 	[InlineData(SimdLevel.None, Unaligned64K)]
 	[InlineData(SimdLevel.Sse2, Unaligned64K)]
+	[InlineData(SimdLevel.Ssse3, Unaligned64K)]
 	[InlineData(SimdLevel.Avx2, Unaligned64K)]
 	public void DecoderCorrectness(SimdLevel level, int length)
 	{
 		UpdateSimdLevel(level);
 
-		var codec = new SimdBase16Codec(false);
+		var codec = new CodecUnderTest(false);
 
 		var source = new byte[length];
 		var target = new char[length * 2];
@@ -144,13 +152,14 @@ public class SimdBase16Tests
 	[Theory]
 	[InlineData(SimdLevel.None, Unaligned64K)]
 	[InlineData(SimdLevel.Sse2, Unaligned64K)]
+	[InlineData(SimdLevel.Ssse3, Unaligned64K)]
 	[InlineData(SimdLevel.Avx2, Unaligned64K)]
 	public void DecoderLowerCase(SimdLevel level, int length)
 	{
 		UpdateSimdLevel(level);
 
 		// note: codes is setup with upper case but it should be tolerant enough
-		var codec = new SimdBase16Codec(false);
+		var codec = new CodecUnderTest(false);
 
 		var source = new byte[length];
 		var target = new char[length * 2];

@@ -1,3 +1,7 @@
+## 0.0.8 (2023/01/31)
+* IMPROVED: ~5% speed improvements for SIMD Base16 codecs
+* IMPROVED: New SIMD Base64 SSSE3 decoder (~10% faster then SSE2)
+
 ## 0.0.7 (2023/01/19)
 * IMPROVED: Base64 can use SIMD (SSE3) instructions to speed up encoding/decoding
 

@@ -1,7 +1,6 @@
 #if NET5_0_OR_GREATER
 
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -17,73 +16,60 @@ namespace K4os.Text.BaseX.Internal;
 
 internal class SimdBase16: SimdTools
 {
+	// ReSharper disable InconsistentNaming
+
+	private const sbyte ascii0 = (sbyte)'0';
+	private const sbyte ascii9 = (sbyte)'9';
+	private const sbyte lowerA = (sbyte)'a';
+	private const sbyte upperA = (sbyte)'A';
+
+	// ReSharper disable once IdentifierTypo
+	// adjusted lower case ascii a after adding 0
+	private const sbyte alcaaaa0 = lowerA - ascii0 - 10;
+
+	private const sbyte sbyte9 = 9;
+	private const byte byte0x0F = 0x0F;
+	private const sbyte sbyte0x20 = 0x20;
+	private const ushort ushort0x00FF = 0x00FF;
+
+	// ReSharper restore InconsistentNaming
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static Vector128<byte> ToAscii(Vector128<byte> digits, sbyte ascii0, sbyte asciiA) =>
+	protected static Vector128<sbyte> ToAscii_SSE2(
+		Vector128<byte> digits, sbyte aaa) =>
 		Sse2.Add(
-			Sse2.Add(digits, Vector128.Create((byte)ascii0)),
+			Sse2.Add(digits.AsSByte(), Vector128.Create(ascii0)),
 			Sse2.And(
-				Sse2.CompareGreaterThan(digits.AsSByte(), Vector128.Create((sbyte)9)).AsByte(),
-				Vector128.Create((byte)(asciiA - ascii0 - 10))));
+				Vector128.Create(aaa),
+				Sse2.CompareGreaterThan(digits.AsSByte(), Vector128.Create(sbyte9)))
+		).AsSByte();
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static Vector128<byte> ToAscii(Vector128<byte> digits, Vector128<byte> ascii) =>
-		Ssse3.Shuffle(ascii, digits);
+	protected static Vector128<sbyte> ToAscii_SSSE3(
+		Vector128<byte> digits, Vector128<sbyte> ascii) =>
+		Ssse3.Shuffle(ascii, digits.AsSByte());
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static Vector256<byte> ToAscii(Vector256<byte> digits, Vector256<byte> ascii) =>
-		Avx2.Shuffle(ascii, digits);
+	protected static Vector256<sbyte> ToAscii_AVX2(
+		Vector256<byte> digits, Vector256<sbyte> ascii) =>
+		Avx2.Shuffle(ascii, digits.AsSByte());
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static Vector128<sbyte> FromAsciiImpl(
-		Vector128<sbyte> digits, sbyte ascii0, sbyte asciiA)
-	{
-		Debug.Assert((ascii0 & asciiA & 0x20) != 0);
-
-		digits = Sse2.Or(digits, Vector128.Create((sbyte)0x20));
-		var diff = Sse2.And(
-			Sse2.CompareGreaterThan(digits, Vector128.Create((sbyte)(asciiA - 1))),
-			Vector128.Create((sbyte)(asciiA - ascii0 - 10)));
-		return Sse2.And(
-			Sse2.Subtract(Sse2.Subtract(digits, diff), Vector128.Create(ascii0)),
-			Vector128.Create((sbyte)0x0F));
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static Vector256<sbyte> FromAsciiImpl(
-		Vector256<sbyte> digits, sbyte ascii0, sbyte asciiA)
-	{
-		Debug.Assert((ascii0 & asciiA & 0x20) != 0);
-
-		digits = Avx2.Or(digits, Vector256.Create((sbyte)0x20));
-		var diff = Avx2.And(
-			Avx2.CompareGreaterThan(digits, Vector256.Create((sbyte)(asciiA - 1))),
-			Vector256.Create((sbyte)(asciiA - ascii0 - 10)));
-		return Avx2.And(
-			Avx2.Subtract(Avx2.Subtract(digits, diff), Vector256.Create(ascii0)),
-			Vector256.Create((sbyte)0x0F));
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static Vector128<byte> FromAscii(
-		Vector128<byte> digits, sbyte ascii0, sbyte asciiA) =>
-		FromAsciiImpl(digits.AsSByte(), ascii0, (sbyte)(asciiA | 0x20)).AsByte();
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected static Vector256<byte> FromAscii(
-		Vector256<byte> digits, sbyte ascii0, sbyte asciiA) =>
-		FromAsciiImpl(digits.AsSByte(), ascii0, (sbyte)(asciiA | 0x20)).AsByte();
-
 	private static int AdjustBeforeEncode(
 		bool support, int sourceLength, int targetLength, int vectorSize)
 	{
-		sourceLength = !support || sourceLength <= 0 ? 0 : sourceLength & ~(vectorSize - 1);
-		if (sourceLength > 0 && targetLength < sourceLength * 2)
+		if (!support || sourceLength <= 0) return 0;
+
+		sourceLength &= ~(vectorSize - 1);
+
+		if (targetLength < sourceLength * 2)
 			throw new ArgumentException("Output buffer is too small");
 
 		return sourceLength;
 	}
 
-	public static unsafe int EncodeSse2(
+	[MethodImpl(MethodImplOptions.AggressiveOptimization)]
+	public static unsafe int Encode_SSE2(
 		byte* source, int sourceLength,
 		char* target, int targetLength,
 		sbyte* nibbleToAscii)
@@ -92,77 +78,68 @@ internal class SimdBase16: SimdTools
 			Sse2.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
-		var ascii0 = nibbleToAscii[0x00];
-		var asciiA = nibbleToAscii[0x0A];
+		// this is "adjusted ascii A after adding 0" (aaaaa0?)
+		var aaa = (sbyte)(nibbleToAscii[0x0A] - ascii0 - 10);
+		var mask = Vector128.Create(byte0x0F);
 
-		var s = source;
 		var t = target;
-		var l = source + sourceLength;
+		var limit = source + sourceLength;
 
-		var maskF = Vector128.Create((byte)0x0F);
-
-		while (s < l)
+		// this loop would benefit from loop alignment,
+		// bit is seems compiler does not do it,
+		// so a performance depends on luck
+		for (var s = source; s < limit; s += 16)
 		{
-			var chunk = Sse2.LoadVector128(s);
-			s += 16;
+			var chunk = LoadBytes128(s);
 
-			var loDigits = Sse2.And(
-				chunk,
-				maskF);
-			var hiDigits = Sse2.And(
-				Sse2.ShiftRightLogical(chunk.AsUInt16(), 4).AsByte(),
-				maskF);
+			var digitsH = Sse2.And(Sse2.ShiftRightLogical(chunk.AsUInt16(), 4).AsByte(), mask);
+			var digitsL = Sse2.And(chunk, mask);
 
-			SaveAscii128(ToAscii(Sse2.UnpackLow(hiDigits, loDigits), ascii0, asciiA), t);
+			SaveAscii128(ToAscii_SSE2(Sse2.UnpackLow(digitsH, digitsL), aaa), t);
 			t += 16;
-
-			SaveAscii128(ToAscii(Sse2.UnpackHigh(hiDigits, loDigits), ascii0, asciiA), t);
+			SaveAscii128(ToAscii_SSE2(Sse2.UnpackHigh(digitsH, digitsL), aaa), t);
 			t += 16;
 		}
 
 		return sourceLength;
 	}
 
-	public static unsafe int EncodeSsse3(
+	[MethodImpl(MethodImplOptions.AggressiveOptimization)]
+	public static unsafe int Encode_SSSE3(
 		byte* source, int sourceLength,
 		char* target, int targetLength,
 		sbyte* nibbleToAscii)
 	{
 		sourceLength = AdjustBeforeEncode(
-			Ssse3.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
+			Sse2.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
-		var map = Sse2.LoadVector128(nibbleToAscii).AsByte();
+		var ascii = LoadBytes128((byte*)nibbleToAscii).AsSByte();
+		var mask = Vector128.Create(byte0x0F);
 
-		var s = source;
 		var t = target;
-		var l = source + sourceLength;
+		var limit = source + sourceLength;
 
-		var maskF = Vector128.Create((byte)0x0F);
-
-		while (s < l)
+		// this loop would benefit from loop alignment,
+		// bit is seems compiler does not do it,
+		// so a performance depends on luck
+		for (var s = source; s < limit; s += 16)
 		{
-			var chunk = Sse2.LoadVector128(s);
-			s += 16;
+			var chunk = LoadBytes128(s);
 
-			var loDigits = Sse2.And(
-				chunk,
-				maskF);
-			var hiDigits = Sse2.And(
-				Sse2.ShiftRightLogical(chunk.AsUInt16(), 4).AsByte(),
-				maskF);
+			var digitsH = Sse2.And(Sse2.ShiftRightLogical(chunk.AsUInt16(), 4).AsByte(), mask);
+			var digitsL = Sse2.And(chunk, mask);
 
-			SaveAscii128(ToAscii(Sse2.UnpackLow(hiDigits, loDigits), map), t);
+			SaveAscii128(ToAscii_SSSE3(Sse2.UnpackLow(digitsH, digitsL), ascii), t);
 			t += 16;
-
-			SaveAscii128(ToAscii(Sse2.UnpackHigh(hiDigits, loDigits), map), t);
+			SaveAscii128(ToAscii_SSSE3(Sse2.UnpackHigh(digitsH, digitsL), ascii), t);
 			t += 16;
 		}
 
 		return sourceLength;
 	}
 
-	public static unsafe int EncodeAvx2(
+	public static unsafe int Encode_AVX2(
 		byte* source, int sourceLength,
 		char* target, int targetLength,
 		sbyte* nibbleToAscii)
@@ -171,32 +148,27 @@ internal class SimdBase16: SimdTools
 			Avx2.IsSupported, sourceLength, targetLength, Vector256<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
-		var s = source;
+		var map = Avx2.Permute4x64(
+			Sse2.LoadVector128(nibbleToAscii).ToVector256Unsafe().AsInt64(),
+			PERM_0101
+		).AsSByte();
+		var mask = Vector256.Create(byte0x0F);
+
 		var t = target;
-		var l = source + sourceLength;
+		var limit = source + sourceLength;
 
-		var map = Avx2
-			.Permute4x64(Sse2.LoadVector128(nibbleToAscii).ToVector256Unsafe().AsInt64(), PERM_0101)
-			.AsByte();
-
-		var maskF = Vector256.Create((byte)0x0F);
-
-		while (s < l)
+		for (var s = source; s < limit; s += 32)
 		{
 			var chunk = LoadBytes256(s);
-			s += 32;
 
-			var loDigits = Avx2.And(
-				chunk,
-				maskF);
-			var hiDigits = Avx2.And(
-				Avx2.ShiftRightLogical(chunk.AsUInt16(), 4).AsByte(),
-				maskF);
+			var digitsL = Avx2.And(
+				chunk, mask);
+			var digitsH = Avx2.And(
+				Avx2.ShiftRightLogical(chunk.AsUInt16(), 4).AsByte(), mask);
 
-			SaveAscii256(ToAscii(Avx2.UnpackLow(hiDigits, loDigits), map), t);
+			SaveAscii256(ToAscii_AVX2(Avx2.UnpackLow(digitsH, digitsL), map), t);
 			t += 32;
-
-			SaveAscii256(ToAscii(Avx2.UnpackHigh(hiDigits, loDigits), map), t);
+			SaveAscii256(ToAscii_AVX2(Avx2.UnpackHigh(digitsH, digitsL), map), t);
 			t += 32;
 		}
 
@@ -206,61 +178,147 @@ internal class SimdBase16: SimdTools
 	private static int AdjustBeforeDecode(
 		bool support, int sourceLength, int targetLength, int vectorSize)
 	{
-		sourceLength = !support || sourceLength <= 0 ? 0 : sourceLength & ~(vectorSize * 2 - 1);
-		if (sourceLength > 0 && targetLength * 2 < sourceLength)
+		if (!support || sourceLength <= 0) return 0;
+
+		sourceLength &= ~(vectorSize * 2 - 1);
+
+		if (targetLength * 2 < sourceLength)
 			throw new ArgumentException("Output buffer is too small");
 
 		return sourceLength;
 	}
 
-	public static unsafe int DecodeSse2(
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static Vector128<byte> FromAscii_SSE2(Vector128<sbyte> digits)
+	{
+		digits = Sse2.Or(digits, Vector128.Create(sbyte0x20));
+		var diff = Sse2.And(
+			Sse2.CompareGreaterThan(digits, Vector128.Create(ascii9)),
+			Vector128.Create(alcaaaa0));
+		return Sse2.And(
+			Sse2.Subtract(Sse2.Subtract(digits, diff), Vector128.Create(ascii0)).AsByte(),
+			Vector128.Create(byte0x0F));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static Vector128<byte> FromAscii_SSSE3(
+		Vector128<sbyte> digits, Vector128<sbyte> aat)
+	{
+		// 30 -> digit, 41 -> upper, 61 -> lower
+		// map = [0, 0, 0, -48, -65 + 10, 0, -97 + 10, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		// adj = shuffle(map, shr(ascii, 4))
+		// return and(add(ascii, adj), 0x0F)
+
+		var type = Sse2.And(
+			Sse2.ShiftRightLogical(digits.AsInt16(), 4).AsByte(),
+			Vector128.Create(byte0x0F));
+		var diff = Ssse3.Shuffle(aat.AsByte(), type).AsSByte();
+		return Sse2.Subtract(digits, diff).AsByte();
+	}
+
+	public static unsafe int Decode_SSE2(
 		char* source, int sourceLength,
-		byte* target, int targetLength,
-		sbyte* nibbleToAscii)
+		byte* target, int targetLength)
 	{
 		sourceLength = AdjustBeforeDecode(
 			Sse2.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
-		var ascii0 = nibbleToAscii[0x00];
-		var asciiA = nibbleToAscii[0x0A];
+		var asciiMask = Vector128.Create(ushort0x00FF);
 
-		var s = source;
 		var t = target;
-		var l = source + sourceLength;
+		var limit = source + sourceLength;
 
-		var asciiMask = Vector128.Create((ushort)0xFF);
-
-		while (s < l)
+		for (var s = source; s < limit; s += 32)
 		{
-			var chunk0 = LoadAscii128(s);
-			s += 16;
+			var chunk0 = LoadAscii128(s + 0x00);
+			var chunk1 = LoadAscii128(s + 0x10);
 
-			var chunk1 = LoadAscii128(s);
-			s += 16;
-
-			var hiDigits = Sse2.PackUnsignedSaturate(
+			var digitsH = Sse2.PackUnsignedSaturate(
 				Sse2.And(chunk0.AsUInt16(), asciiMask).AsInt16(),
-				Sse2.And(chunk1.AsUInt16(), asciiMask).AsInt16());
+				Sse2.And(chunk1.AsUInt16(), asciiMask).AsInt16()
+			).AsSByte();
 
-			var loDigits = Sse2.PackUnsignedSaturate(
+			var digitsL = Sse2.PackUnsignedSaturate(
 				Sse2.ShiftRightLogical(chunk0.AsUInt16(), 8).AsInt16(),
-				Sse2.ShiftRightLogical(chunk1.AsUInt16(), 8).AsInt16());
+				Sse2.ShiftRightLogical(chunk1.AsUInt16(), 8).AsInt16()
+			).AsSByte();
 
-			hiDigits = Sse2
-				.ShiftLeftLogical(FromAscii(hiDigits, ascii0, asciiA).AsUInt16(), 4)
-				.AsByte();
+			var nibblesL = FromAscii_SSE2(digitsL);
+			var nibblesH = FromAscii_SSE2(digitsH);
 
-			loDigits = FromAscii(loDigits, ascii0, asciiA);
+			SaveBytes128(
+				Sse2.Or(nibblesL, Sse2.ShiftLeftLogical(nibblesH.AsUInt16(), 4).AsByte()),
+				t);
 
-			Sse2.Store(t, Sse2.Or(loDigits, hiDigits));
 			t += 16;
 		}
 
 		return sourceLength;
 	}
 
-	public static unsafe int DecodeAvx2(
+	public static unsafe int Decode_SSSE3(
+		char* source, int sourceLength,
+		byte* target, int targetLength)
+	{
+		sourceLength = AdjustBeforeDecode(
+			Sse2.IsSupported, sourceLength, targetLength, Vector128<byte>.Count);
+		if (sourceLength <= 0) return 0;
+
+		var asciiMask = Vector128.Create(ushort0x00FF);
+		var aat = Vector128.Create(
+			0, 0, 0, ascii0, upperA - 10, 0, lowerA - 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+		var t = target;
+		var limit = source + sourceLength;
+
+		for (var s = source; s < limit; /* s += 32 */)
+		{
+			var chunk0 = LoadAscii128(s);
+			s += 16;
+			var chunk1 = LoadAscii128(s);
+			s += 16;
+
+			var digitsH = Sse2.PackUnsignedSaturate(
+				Sse2.And(chunk0.AsUInt16(), asciiMask).AsInt16(),
+				Sse2.And(chunk1.AsUInt16(), asciiMask).AsInt16()
+			).AsSByte();
+
+			var digitsL = Sse2.PackUnsignedSaturate(
+				Sse2.ShiftRightLogical(chunk0.AsUInt16(), 8).AsInt16(),
+				Sse2.ShiftRightLogical(chunk1.AsUInt16(), 8).AsInt16()
+			).AsSByte();
+
+			var nibblesL = FromAscii_SSSE3(digitsL, aat);
+			var nibblesH = FromAscii_SSSE3(digitsH, aat);
+
+			SaveBytes128(
+				Sse2.Or(nibblesL, Sse2.ShiftLeftLogical(nibblesH.AsUInt16(), 4).AsByte()),
+				t);
+
+			t += 16;
+		}
+
+		return sourceLength;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static Vector256<byte> FromAscii_AVX2(
+		Vector256<sbyte> digits, Vector256<sbyte> aat)
+	{
+		// 30 -> digit, 41 -> upper, 61 -> lower
+		// map = [0, 0, 0, -48, -65 + 10, 0, -97 + 10, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		// adj = shuffle(map, shr(ascii, 4))
+		// return and(add(ascii, adj), 0x0F)
+
+		var type = Avx2.And(
+			Avx2.ShiftRightLogical(digits.AsInt16(), 4).AsByte(),
+			Vector256.Create(byte0x0F));
+		var diff = Avx2.Shuffle(aat.AsByte(), type).AsSByte();
+		return Avx2.Subtract(digits, diff).AsByte();
+	}
+
+	public static unsafe int Decode_AVX2(
 		char* source, int sourceLength,
 		byte* target, int targetLength,
 		sbyte* nibbleToAscii)
@@ -269,38 +327,37 @@ internal class SimdBase16: SimdTools
 			Avx2.IsSupported, sourceLength, targetLength, Vector256<byte>.Count);
 		if (sourceLength <= 0) return 0;
 
-		var ascii0 = nibbleToAscii[0x00];
-		var asciiA = nibbleToAscii[0x0A];
-
-		var s = source;
 		var t = target;
-		var l = source + sourceLength;
+		var limit = source + sourceLength;
 
-		var asciiMask = Vector256.Create((ushort)0xFF);
+		var asciiMask = Vector256.Create(ushort0x00FF);
+		var aat = Vector256.Create(
+			0, 0, 0, ascii0, upperA - 10, 0, lowerA - 10, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, ascii0, upperA - 10, 0, lowerA - 10, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-		while (s < l)
+		for (var s = source; s < limit; /* s += 64 */)
 		{
 			var chunk0 = LoadAscii256(s);
 			s += 32;
-
 			var chunk1 = LoadAscii256(s);
 			s += 32;
 
-			var hiDigits = Avx2.PackUnsignedSaturate(
+			var digitsH = Avx2.PackUnsignedSaturate(
 				Avx2.And(chunk0.AsUInt16(), asciiMask).AsInt16(),
-				Avx2.And(chunk1.AsUInt16(), asciiMask).AsInt16());
+				Avx2.And(chunk1.AsUInt16(), asciiMask).AsInt16()
+			).AsSByte();
 
-			var loDigits = Avx2.PackUnsignedSaturate(
+			var digitsL = Avx2.PackUnsignedSaturate(
 				Avx2.ShiftRightLogical(chunk0.AsUInt16(), 8).AsInt16(),
-				Avx2.ShiftRightLogical(chunk1.AsUInt16(), 8).AsInt16());
+				Avx2.ShiftRightLogical(chunk1.AsUInt16(), 8).AsInt16()
+			).AsSByte();
 
-			hiDigits = Avx2
-				.ShiftLeftLogical(FromAscii(hiDigits, ascii0, asciiA).AsUInt16(), 4)
-				.AsByte();
+			var nibblesH = FromAscii_AVX2(digitsH, aat);
+			var nibblesL = FromAscii_AVX2(digitsL, aat);
 
-			loDigits = FromAscii(loDigits, ascii0, asciiA);
-
-			SaveBytes256(Avx2.Or(loDigits, hiDigits), t);
+			SaveBytes256(
+				Avx2.Or(nibblesL, Avx2.ShiftLeftLogical(nibblesH.AsUInt16(), 4).AsByte()),
+				t);
 
 			t += 32;
 		}
