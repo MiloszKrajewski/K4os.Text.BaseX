@@ -1,5 +1,6 @@
 using System;
 using BenchmarkDotNet.Attributes;
+using K4os.Text.BaseX;
 using K4os.Text.BaseX.Codecs;
 using K4os.Text.BaseX.Internal;
 
@@ -9,8 +10,8 @@ public class SimdEncoder16
 {
 	private byte[] _original;
 	private char[] _encoded;
-	private Base16Codec _scalar;
-	private SimdBase16Codec _vector;
+	private BaseXCodec _scalar;
+	private BaseXCodec _vector;
 
 	[Params(32, 0x100, 0x1000, 0x10000)]
 	public int Length { get; set; }
