@@ -7,22 +7,28 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "K4os.Text.BaseX", "K4os.Tex
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Text.BaseX.Test", "K4os.Text.BaseX.Test\K4os.Text.BaseX.Test.csproj", "{0AF1023E-0EF4-4AAE-B0BE-9DEED307955E}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{835ECDA0-7229-4D96-8B74-8D9F119E6683}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".environment", ".environment", "{835ECDA0-7229-4D96-8B74-8D9F119E6683}"
 	ProjectSection(SolutionItems) = preProject
-		..\build.fsx = ..\build.fsx
-		..\build.tools.fsx = ..\build.tools.fsx
-		..\CHANGES.md = ..\CHANGES.md
-		..\paket.dependencies = ..\paket.dependencies
-		..\README.md = ..\README.md
 		..\.secrets.cfg = ..\.secrets.cfg
-		..\Common.targets = ..\Common.targets
-		..\LICENSE = ..\LICENSE
-		..\settings.cfg = ..\settings.cfg
 		..\.gitignore = ..\.gitignore
-		..\Signing.targets = ..\Signing.targets
-		..\paket.lock = ..\paket.lock
+		..\Directory.Packages.props = ..\Directory.Packages.props
+		..\Directory.Build.props = ..\Directory.Build.props
+		..\Directory.Build.targets = ..\Directory.Build.targets
+		..\settings.cfg = ..\settings.cfg
+		..\.env = ..\.env
 		..\global.json = ..\global.json
+		..\nuget.config = ..\nuget.config
+		..\paket.dependencies = ..\paket.dependencies
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".resources", ".resources", "{EF37FE4A-3F48-4DC3-AD44-B12C53A1F1CF}"
+	ProjectSection(SolutionItems) = preProject
+		..\CHANGES.md = ..\CHANGES.md
+		..\LICENSE = ..\LICENSE
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "_build", "..\.nuke\build\_build.csproj", "{96032870-E409-41A8-AA93-5D6082217F30}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{09557555-E201-425B-ADD6-68A8889DADC7}"
 EndProject

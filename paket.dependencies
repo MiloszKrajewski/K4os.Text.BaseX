@@ -16,6 +16,8 @@ nuget System.ValueTuple
 nuget System.Memory
 
 nuget BenchmarkDotNet
-nuget xunit
-nuget xunit.runner.visualstudio
+
 nuget Microsoft.NET.Test.Sdk
+nuget xunit
+nuget xunit.runner.visualstudio copy_local:true
+nuget coverlet.collector copy_local:true

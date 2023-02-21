@@ -1,9 +1,0 @@
-<Project>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' and Exists('../../K4os.Text.BaseX.snk')">
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>../../K4os.Text.BaseX.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
-</Project>

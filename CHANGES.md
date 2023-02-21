@@ -1,3 +1,7 @@
+## 0.0.9 (2023/02/21)
+* FIXED: NullReferenceException when trying to use Base64.Serializer codec
+* IMPROVED: Minor speed improvement for Base64 SIMD codec
+
 ## 0.0.8 (2023/01/31)
 * IMPROVED: ~5% speed improvements for SIMD Base16 codecs
 * IMPROVED: New SIMD Base64 SSSE3 decoder (~10% faster then SSE2)
