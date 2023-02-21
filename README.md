@@ -390,6 +390,6 @@ var deserialized = Base64.Default.Decode(serialized);
 # Build
 
 ```shell
-paket install
-fake build
+dotnet tool restore
+dotnet r build
 ```

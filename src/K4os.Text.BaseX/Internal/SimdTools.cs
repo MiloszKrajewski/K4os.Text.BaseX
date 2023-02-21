@@ -74,7 +74,6 @@ internal class SimdTools: SimdSettings
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	[Obsolete("Use it only when you measure performance")]
 	protected static unsafe void SaveAscii128(
 		Vector128<sbyte> source, char* target, Vector128<sbyte> zero)
 	{

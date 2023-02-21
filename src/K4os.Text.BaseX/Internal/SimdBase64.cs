@@ -42,11 +42,10 @@ internal class SimdBase64: SimdTools
 		var sourceStart = source;
 		var sourceLimit = source + sourceLength;
 
-		while (source < sourceLimit)
+		var t = target;
+		for (var s = source; s < sourceLimit; s += 12, t += 16)
 		{
-			Encode_SSSE3(source, target);
-			source += 12;
-			target += 16;
+			Encode_SSSE3(s, t);
 		}
 
 		return (int)((source - sourceStart) / 3);
@@ -55,7 +54,7 @@ internal class SimdBase64: SimdTools
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static unsafe void Encode_SSSE3(byte* source, char* target)
 	{
-		SaveAscii128(ToAscii_SSSE3(Unpack_SSSE3(LoadBytes128(source))), target);
+		SaveAscii128(ToAscii_SSSE3(Unpack_SSSE3(LoadBytes128(source))), target, Vector128<sbyte>.Zero);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
