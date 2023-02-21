@@ -9,7 +9,7 @@ namespace K4os.Text.BaseX;
 /// <summary>Static class with helper and factory methods for Base64 codec.</summary>
 public static class Base64
 {
-	private static Base64Codec _serializer;
+	private static Base64Codec? _serializer;
 
 	internal const string Digits62 =
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -47,7 +47,7 @@ public static class Base64
 	public static byte[] FromBase64(this string encoded) => Default.Decode(encoded);
 
 	[SuppressMessage("ReSharper", "UnusedParameter.Local")]
-	private static Base64Codec TryCreateSimdCodec()
+	private static Base64Codec? TryCreateSimdCodec()
 	{
 		#if NET5_0_OR_GREATER
 		if (SimdSettings.IsSimdSupported) 
@@ -60,8 +60,8 @@ public static class Base64
 		TryCreateSimdCodec() ??
 		new Base64Codec(DefaultDigits, true, '=');
 
-	private static Base64Codec CreateUrlCodec() =>
-		new Base64Codec(UrlDigits, false, '=');
+	private static Base64Codec CreateUrlCodec() => 
+		new(UrlDigits, false, '=');
 
 	private static Base64Codec CreateSerializerCodec()
 	{
@@ -70,9 +70,13 @@ public static class Base64
 		#endif
 		return IntPtr.Size < sizeof(ulong) ? Default : new LookupBase64Codec();
 	}
-	
-	private static Base64Codec GetOrCreateSerializerCodec() =>
-		// _serializer ??= CreateSerializerCodec(); should be enough but this is safer
-		Volatile.Read(ref _serializer) ??
+
+	private static Base64Codec GetOrCreateSerializerCodec()
+	{
+		var serializer = Volatile.Read(ref _serializer);
+		if (serializer is not null) return serializer;
+
 		Interlocked.Exchange(ref _serializer, CreateSerializerCodec());
+		return _serializer!;
+	}
 }

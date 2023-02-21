@@ -20,7 +20,7 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	private static readonly string EmptyText = Empty.Text;
 
 	private readonly Guid _guid;
-	private readonly string _text;
+	private readonly string? _text;
 
 	/// <summary>Creates a ShortGuid from a string. It accepts both "normal" guid and
 	/// base64 short guid.</summary>
@@ -58,8 +58,10 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <summary>Tries to parsed text as <see cref="ShortGuid"/>.</summary>
 	/// <param name="text">Text with ShortGuid or Guid.</param>
 	/// <returns><see cref="ShortGuid"/> or <c>null</c>.</returns>
-	public static ShortGuid? TryParse(string text) =>
-		ParseShortGuid(text, out var guid, out text, false) ? new ShortGuid(guid, text) : null;
+	public static ShortGuid? TryParse(string? text) =>
+		TryParseShortGuid(text, out var guid, out text, false) 
+			? new ShortGuid(guid, text!) 
+			: default(ShortGuid?);
 
 	/// <summary>Parsed text as <see cref="ShortGuid"/>, throws exception if not valid Guid/ShortGuid.</summary>
 	/// <param name="text">Text with ShortGuid or Guid.</param>
@@ -81,7 +83,7 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// </summary>
 	/// <param name="obj">The object to compare.</param>
 	/// <returns><c>true</c> if objects are representing same Guid.</returns>
-	public override bool Equals(object obj) =>
+	public override bool Equals(object? obj) =>
 		obj switch {
 			ShortGuid sg => _guid.Equals(sg._guid),
 			Guid g => _guid.Equals(g),
@@ -94,7 +96,7 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <param name="obj">The object to compare.</param>
 	/// <returns>A signed number indicating the relative values of this instance and
 	/// <paramref name="obj" />.</returns>
-	public int CompareTo(object obj) =>
+	public int CompareTo(object? obj) =>
 		obj switch {
 			ShortGuid sg => _guid.CompareTo(sg._guid),
 			Guid g => _guid.CompareTo(g),
@@ -135,7 +137,7 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <summary>Decodes given base64 string to Guid.</summary>
 	/// <param name="value">The base64 encoded string of a Guid</param>
 	/// <returns>A new Guid.</returns>
-	private static unsafe Guid Decode(string value)
+	private static unsafe Guid Decode(string? value)
 	{
 		if (string.IsNullOrEmpty(value))
 			return Guid.Empty;
@@ -176,11 +178,15 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 	/// <param name="guid">Guid.</param>
 	/// <returns>ShortGuid</returns>
 	public static implicit operator ShortGuid(Guid guid) => new(guid);
+	
+	private static void ParseShortGuid(
+		string input, out Guid guid, out string text) =>
+		TryParseShortGuid(input, out guid, out text!, true);
 
-	private static bool ParseShortGuid(
-		string input,
-		out Guid guid, out string text,
-		bool failOrError = true)
+	private static bool TryParseShortGuid(
+		string? input,
+		out Guid guid, out string? text,
+		bool failOrError)
 	{
 		// if text is empty assume Guid.Empty (well, debatable)
 		// is text looks like short guid assume short guid
@@ -223,7 +229,7 @@ public readonly struct ShortGuid: IComparable, IEquatable<ShortGuid>, IComparabl
 
 	private enum ShortGuidFormat { Invalid, Valid, Strict }
 
-	private static ShortGuidFormat Validate(string text)
+	private static ShortGuidFormat Validate(string? text)
 	{
 		if (text is null) return ShortGuidFormat.Invalid;
 

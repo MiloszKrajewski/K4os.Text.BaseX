@@ -1,0 +1,12 @@
+<Project>
+  <ItemGroup>
+    <!--
+    This repository is not using Central Package Version Management, because it is still not good.
+    -->
+    <!--
+    <PackageVersion Include="System.Reactive" Version="4.4.1" />
+    <PackageVersion Include="System.Interactive" Version="4.1.1" />
+    <PackageVersion Include="Newtonsoft.Json" Version="12.0.3" />
+    -->
+  </ItemGroup>
+</Project>
