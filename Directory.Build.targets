@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup Condition=" '$(SignAssembly)' == 'true' ">
+    <AssemblyOriginatorKeyFile>$(RepositoryRoot)/.signing.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' and '$(IsPackable)' == 'true' ">
+    <TreatWarningsAsErrors Condition=" '$(IsPacking)' == 'true' ">true</TreatWarningsAsErrors>
+    <Optimize>true</Optimize>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="*.?sproj.DotSettings"/>
+  </ItemGroup>
+</Project>

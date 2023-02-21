@@ -1,0 +1,38 @@
+<Project>
+  <!--
+  $(MSBuildThisFileDirectory) - is a variable that points to the directory of the current project file.
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />  
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize Condition=" '$(Configuration)' == 'Release' ">true</Optimize>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <NoWarn>$(NoWarn);NU5125;NU5048</NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Product>K4os.Text.BaseX</Product>
+    <Description>Implementation of Base16, Base64, Base85 codecs</Description>
+    <Authors>Milosz Krajewski</Authors>
+    <Copyright>Milosz Krajewski</Copyright>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/MiloszKrajewski/K4os.Text.BaseX/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/MiloszKrajewski/K4os.Text.BaseX</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MiloszKrajewski/K4os.Text.BaseX</RepositoryUrl>
+    <!--
+    <PackageIconUrl>https://github.com/MiloszKrajewski/K4os.Text.BaseX/blob/master/doc/icon.png?raw=true</PackageIconUrl>
+    -->
+  </PropertyGroup>
+  <PropertyGroup>
+    <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
+  </PropertyGroup>
+  <!--
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  -->
+</Project>

@@ -1,11 +1,15 @@
 {
   "sdk": {
-    "version": "6.0.100",
+    "version": "6.0.405",
     "rollForward": "latestMinor"
   },
   "scripts": {
-    "clean": "./fake clean",
-    "build": "./fake build",
-    "benchmark": "dotnet run --project ./src/Benchmarks -c Release -- -d -p -f *Base16SimdEncoderChallenge*"
+    "clean": ".\\nuke clean",
+    "restore": ".\\nuke restore",
+    "build": ".\\nuke build",
+    "rebuild": ".\\nuke rebuild",
+    "release": ".\\nuke release",
+    "test": ".\\nuke test",
+    "benchmark": "dotnet run --project ./src/Benchmarks -c Release -- -d -p"
   }
 }
