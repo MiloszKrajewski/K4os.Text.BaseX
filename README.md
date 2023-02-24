@@ -331,13 +331,13 @@ class Base16
 class Base64
 {
     // general purpose base64 codec
-	static Base64Codec Default { get; }
+    static Base64Codec Default { get; }
 	
-	// url safe base64 codec, no padding, only url friendly characters
-	static Base64Codec Url { get; }
+    // url safe base64 codec, no padding, only url friendly characters
+    static Base64Codec Url { get; }
 	
-	// base64 codec optimized for bigger content
-	static Base64Codec Serializer { get; }
+    // base64 codec optimized for bigger content
+    static Base64Codec Serializer { get; }
 }
 
 class Base85
@@ -390,6 +390,5 @@ var deserialized = Base64.Default.Decode(serialized);
 # Build
 
 ```shell
-dotnet tool restore
-dotnet r build
+build
 ```
