@@ -36,10 +36,8 @@ internal static class Polyfill
 		if (length <= 0)
 			return string.Empty;
 		
-		char[]? pooled = null;
-		var target = length <= MAX_STACKALLOC_CHAR 
-			? stackalloc char[MAX_STACKALLOC_CHAR] 
-			: pooled = ArrayPool<char>.Shared.Rent(length);
+		var pooled = length > MAX_STACKALLOC_CHAR ? ArrayPool<char>.Shared.Rent(length) : null;
+		var target = pooled ?? stackalloc char[MAX_STACKALLOC_CHAR];
 		
 		action(target, arguments);
 		

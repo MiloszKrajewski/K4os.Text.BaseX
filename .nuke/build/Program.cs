@@ -133,6 +133,7 @@ class Program: NukeBuild
 		{
 			var token = GetNugetApiKey();
 
+			// dotnet nuget push .output/*.nupkg --source https://api.nuget.org/v3/index.json --api-key $NUGET_API_KEY
 			DotNetNuGetPush(s => s
 				.SetTargetPath(ArtifactsPattern)
 				.SetSource("https://api.nuget.org/v3/index.json")

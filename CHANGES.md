@@ -1,3 +1,6 @@
+## 0.0.10-alpha (2023/06/19)
+* Clean release
+
 ## 0.0.9 (2023/02/21)
 * FIXED: NullReferenceException when trying to use Base64.Serializer codec
 * IMPROVED: Minor speed improvement for Base64 SIMD codec
